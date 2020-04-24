@@ -7,7 +7,6 @@ import os
 import numpy as np
 from scipy.interpolate import interp1d
 
-
 class FeatureSec():
     '''
     Extracting flow features of a section (features on/near the wall)
@@ -125,7 +124,6 @@ class FeatureSec():
         '''
         Ma_ref = np.linspace(0.0, M_max, n_ref)
         Cp_ref = self.IsentropicCp(Ma_ref, self.Minf)
-
         f = interp1d(Cp_ref, Ma_ref, kind='cubic')
 
         return f(self.Cp)
@@ -313,11 +311,19 @@ class FeatureSec():
         ii = aa[1]
         xx = aa[2]
 
-        if xx < 0.001:
+        if xx <= 1e-6:
             return 0.0
 
-        X = self.x[ii-2:ii+3]
-        Y = yy[ii-2:ii+3]
+        if ii >= self.iLE:
+            i0 = max(self.iLE, ii-2)
+            i1 = i0 + 5
+        else:
+            i1 = min(self.iLE, ii+3)
+            i0 = i1 - 5
+
+        i1 = i0 + 5
+        X = self.x[i0:i1]
+        Y = yy[i0:i1]
         f = interp1d(X, Y, kind='cubic')
 
         return f(xx)
@@ -327,11 +333,10 @@ class FeatureSec():
         '''
         Locate the index and position of basic flow features.
 
-        Basic: L, T, Q, M, S, R, mUy
+        Basic: L, T, Q, M
         '''
         X = self.x
         M = self.Mw
-        dudy = self.dudy
 
         nn  = X.shape[0]
         iLE = self.iLE
@@ -362,9 +367,27 @@ class FeatureSec():
                 break
 
         #* M => position of lower surface maximum Mach number
-        ii = np.argmax(M[:iLE])
-        self.xf_dict['M'][1] = ii
-        self.xf_dict['M'][2] = X[ii]
+        i_M = 0
+        max1 = -1.0
+        for i in np.arange(1, iLE, 1):
+            if M[i-1]<=M[i] and M[i+1]<=M[i] and M[i]>max1:
+                max1 = M[i]
+                i_M = i
+
+        self.xf_dict['M'][1] = i_M
+        self.xf_dict['M'][2] = X[i_M]
+
+    def locate_sep(self):
+        '''
+        Locate the index and position of flow features about du/dy.
+
+        Basic: S, R, mUy
+        '''
+        X = self.x
+        dudy = self.dudy
+
+        nn  = X.shape[0]
+        iLE = self.iLE
 
         #* S => separation start position
         #* R => reattachment position
@@ -653,6 +676,7 @@ class FeatureSec():
         Extract flow features list in the dictionart.
         '''
         self.locate_basic()
+        self.locate_sep()
         self.locate_geo()
         self.locate_shock()
         self.aux_features()
@@ -693,6 +717,90 @@ class FeatureSec():
                 f.write('%10s   %15.6f \n'%(name, value))
 
         f.close()
+
+class FeatureXfoil(FeatureSec):
+    '''
+    Extract features from Xfoil (low speed) results.
+    '''
+    def __init__(self, Minf, AoA, Re):
+        super().__init__(Minf, AoA, Re)
+
+    def setdata(self, x, y, Cp):
+        '''
+        Set the data of this foil or section.   \n
+            x,y,Cp: list, start from upper surface trailing edge (order from xfoil)
+        '''
+        x_  = list(reversed(x))
+        y_  = list(reversed(y))
+        Cp_ = list(reversed(Cp))
+
+        n = int(len(x_)/2)
+        x_  = x_[:n] + [0.0] + x_[n:]
+        y_  = y_[:n] + [0.5*(y_[n]+y_[n-1])] + y_[n:]
+        Cp_ = Cp_[:n] + [0.5*(Cp_[n]+Cp_[n-1])] + Cp_[n:]
+
+        self.x = np.array(x_)
+        self.y = np.array(y_)
+        self.Cp = np.array(Cp_)
+        self.Mw = self.Cp2Mw()
+
+        iLE = np.argmin(self.x)
+        
+        fmw = interp1d(self.x[iLE:], self.Mw[iLE:], kind='cubic')
+        gu  = interp1d(self.x[iLE:], self.y [iLE:], kind='cubic')
+        x_  = np.append(self.x[iLE:0:-1], self.x[0])
+        y_  = np.append(self.y[iLE:0:-1], self.y[0])
+        gl  = interp1d(x_, y_, kind='cubic')
+
+        self.xx = np.arange(0.0, 1.0, 0.001)
+        self.yu = gu(self.xx)
+        self.yl = gl(self.xx)
+        self.mu = fmw(self.xx)
+
+        self.iLE = iLE
+
+    def extract_features(self):
+        '''
+        Extract flow features list in the dictionart.
+        '''
+        self.locate_basic()
+        self.locate_geo()
+
+    #TODO: output features
+    def output_features(self, fname="feature-xfoil.txt", append=True):
+        '''
+        Output all features to file.
+
+        Output order: \n
+            feature:    keys of feature dictionary
+            key:        'X', 'Mw', 'Cp'
+        '''
+        keys = ['X','Mw','Cp']
+        features = ['L', 'T', 'Q', 'M', 'Cu', 'Cl', 'tu', 'tl', 'tm']
+
+        if not os.path.exists(fname):
+            append = False
+
+        if not append:
+            f = open(fname, 'w')
+        else:
+            f = open(fname, 'a')
+
+        for feature in features:
+            
+            if len(self.xf_dict[feature])==2:
+                value = self.getValue(feature)
+                f.write('%10s   %15.6f \n'%(feature, value))
+                continue
+
+            for key in keys:
+                name = key+'-'+feature
+                value = self.getValue(feature, key)
+                f.write('%10s   %15.6f \n'%(name, value))
+
+        f.close()
+
+
 
 #TODO: ========================================
 #TODO: Supportive functions
