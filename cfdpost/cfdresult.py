@@ -12,6 +12,7 @@ class cfl3d():
     '''
 
     def __init__(self):
+        print('All static method functions')
         pass
 
     @staticmethod

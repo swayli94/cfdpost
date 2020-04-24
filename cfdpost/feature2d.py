@@ -1,17 +1,19 @@
 '''
 This module contains a class to extract flow features of airfoils or wing sections.
 '''
-import numpy as np
 import copy
+import os
+
+import numpy as np
 from scipy.interpolate import interp1d
-import matplotlib.pyplot as plt
+
 
 class FeatureSec():
     '''
-    Extracting flow features
+    Extracting flow features of a section (features on/near the wall)
     '''
     _i  = 0     # index of the mesh point
-    _X  = 0.001 # location of the feature location
+    _X  = 0.0   # location of the feature location
     _value = 0.0
 
     #* Dictionary of flow features (identify the index and location)
@@ -40,7 +42,6 @@ class FeatureSec():
         'Hi':  ['maximum Hi', _i, _X],              # position of maximum Hi
         'Hc':  ['maximum Hc', _i, _X],              # position of maximum Hc
         
-        'L12': ['length 1~2', _value],              # X2-X1
         'L1U': ['length 1~U', _value],              # XU-X1
         'L13': ['length 1~3', _value],              # X3-X1
         'LSR': ['length S~R', _value],              # XR-XS
@@ -48,8 +49,7 @@ class FeatureSec():
         'DCp': ['shock strength', _value],          # Cp change through shock wave
         'Err': ['suc Cp area', _value],             # Cp integral of suction plateau fluctuation
         'CLU': ['upper CL', _value],                # CL of upper surface
-        'AFL': ['aft loading', _value],             # CL of aft loading
-        'kaf': ['slope aft', _value]                # average Mw slope of the aft upper surface (N~T)
+        'kaf': ['slope aft', _value]                # average Mw slope of the aft upper surface (3/N~T)
     }
 
     def __init__(self, Minf, AoA, Re):
@@ -273,14 +273,14 @@ class FeatureSec():
 
         return Hi, Hc, (Tw, dudy)
 
-    def getValue(self, feature: str, key: str):
+    def getValue(self, feature: str, key='key'):
         '''
         Get value of given feature. \n
             feature:    key of feature dictionary
             key:        'i', 'X', 'Cp', 'Mw', 'Tw', 'Hi', 'Hc', 'dudy'
         '''
 
-        if not feature in FeatureSec.xf_dict.keys:
+        if not feature in FeatureSec.xf_dict.keys():
             print('  Warning: feature [%s] not valid'%(feature))
             return 0.0
 
@@ -312,6 +312,10 @@ class FeatureSec():
 
         ii = aa[1]
         xx = aa[2]
+
+        if xx < 0.001:
+            return 0.0
+
         X = self.x[ii-2:ii+3]
         Y = yy[ii-2:ii+3]
         f = interp1d(X, Y, kind='cubic')
@@ -472,6 +476,7 @@ class FeatureSec():
             dMw[i] = min(dMw[i], 2)
 
         flag = FeatureSec.check_singleshock(xx, mu, dMw)
+        self.xf_dict['lSW'][1] = flag
         if not flag==1:
             return
 
@@ -595,10 +600,53 @@ class FeatureSec():
         '''
         Calculate auxiliary features based on basic, geo, and shock features.
 
-        Length, lSW, DCp, Err, CLU, AFL, kaf
+        Length, lSW, DCp, Err, CLU, kaf
         '''
+        X  = self.x
+        xx = self.xx
+        mu = self.mu
+        nn = xx.shape[0]
+        x1 = self.xf_dict['1'][2]
+        
+        self.xf_dict['L1U'][1] = self.xf_dict['U'][2] - x1
+        self.xf_dict['L13'][1] = self.xf_dict['3'][2] - x1
+        self.xf_dict['LSR'][1] = self.xf_dict['R'][2] - self.xf_dict['S'][2]
+        self.xf_dict['DCp'][1] = self.getValue('3','Cp') - self.getValue('1','Cp')
 
+        rr = np.cos(self.AoA/180.0*np.pi)
+        #* Err => Cp integral of suction plateau fluctuation
+        # If can not find suction peak, err = 0
+        Err = 0.0
+        iL  = self.xf_dict['L'][1]
+        if iL!=0:
+            i1 = self.xf_dict['1'][1]
+            xL  = self.xf_dict['L'][2]
+            X0 = np.array([xL, self.getValue('L','Cp')])
+            X1 = np.array([x1, self.getValue('1','Cp')])
+            for i in np.arange(iL, i1, 1):
+                XX = np.array([X[i], self.Cp[i]])
+                s, _ = ratio_vec(X0, X1, XX)
+                Err += s*(X[i+1]-X[i])
 
+        self.xf_dict['Err'][1] = abs(Err)*rr
+
+        #* CLU => CL of upper surface
+        CLU = 0.0
+        for i in np.arange(self.iLE, len(X)-1, 1):
+            CLU += 0.5*(self.Cp[i]+self.Cp[i+1])*(X[i+1]-X[i])
+
+        self.xf_dict['CLU'][1] = abs(CLU)*rr
+
+        #* kaf => average Mw slope of the aft upper surface (3/N~T)
+        xN  = self.xf_dict['N'][2]
+        mN  = self.getValue('N','Mw')
+        xT  = self.xf_dict['T'][2]
+        mT  = self.getValue('T','Mw')
+        if xN < 0.1:
+            xN = self.xf_dict['3'][2]
+            mN = self.getValue('3','Mw')
+
+        self.xf_dict['kaf'][1] = (mT-mN)/(xT-xN)
 
     def extract_features(self):
         '''
@@ -609,6 +657,46 @@ class FeatureSec():
         self.locate_shock()
         self.aux_features()
 
+    #TODO: output features
+    def output_features(self, fname="feature2d.txt", append=True, keys_=None):
+        '''
+        Output all features to file. \n
+            keys:  list of key strings for output. None means default.
+
+        Output order: \n
+            feature:    keys of feature dictionary
+            key:        value or ('X', 'Cp', 'Mw', 'Tw', 'Hi', 'Hc', 'dudy')
+        '''
+        if keys_ is not None:
+            keys = copy.deepcopy(keys_)
+        else:
+            keys = ['X', 'Mw', 'Hc']
+
+        if not os.path.exists(fname):
+            append = False
+
+        if not append:
+            f = open(fname, 'w')
+        else:
+            f = open(fname, 'a')
+
+        for feature in self.xf_dict.keys():
+            
+            if len(self.xf_dict[feature])==2:
+                value = self.getValue(feature)
+                f.write('%10s   %15.6f \n'%(feature, value))
+                continue
+
+            for key in keys:
+                name = key+'-'+feature
+                value = self.getValue(feature, key)
+                f.write('%10s   %15.6f \n'%(name, value))
+
+        f.close()
+
+#TODO: ========================================
+#TODO: Supportive functions
+#TODO: ========================================
 
 def ratio_vec(x0, x1, x):
     '''

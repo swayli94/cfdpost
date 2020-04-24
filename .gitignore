@@ -4,4 +4,4 @@ dist/
 build/
 
 Calculation/
-*.f90
+*.txt
