@@ -1,5 +1,5 @@
 FILES:           
-..\cfl3d.xyz        
+cfl3d.xyz        
 plot3d_grid.xyz  
 plot3d_sol.bin   
 cfl3d.out        
