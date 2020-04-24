@@ -1,0 +1,7 @@
+cfdpost/__pycache__/
+cfdpost.egg-info/
+dist/
+build/
+.vscode/
+
+./Calculation/
