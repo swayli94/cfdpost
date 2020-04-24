@@ -6,7 +6,7 @@ import copy
 from scipy.interpolate import interp1d
 import matplotlib.pyplot as plt
 
-class fFeature():
+class FeatureSec():
     '''
     Extracting flow features
     '''
@@ -61,7 +61,7 @@ class fFeature():
         self.Minf = Minf
         self.AoA  = AoA
         self.Re   = Re
-        self.xf_dict = copy.deepcopy(fFeature.xf_dict)
+        self.xf_dict = copy.deepcopy(FeatureSec.xf_dict)
 
     def setdata(self, x, y, Cp, Tw, Hi, Hc, dudy):
         '''
@@ -246,7 +246,7 @@ class fFeature():
 
         #* Calculate Hi & Hc
         for j in range(nn):
-            Hi[j], Hc[j] = fFeature.ShapeFactor(sS[j,:], VtS[j,:], Tw[j], iUe[j])
+            Hi[j], Hc[j] = FeatureSec.ShapeFactor(sS[j,:], VtS[j,:], Tw[j], iUe[j])
 
         #* Limit leading edge Hi
         r1 = 1.0
@@ -280,7 +280,7 @@ class fFeature():
             key:        'i', 'X', 'Cp', 'Mw', 'Tw', 'Hi', 'Hc', 'dudy'
         '''
 
-        if not feature in fFeature.xf_dict.keys:
+        if not feature in FeatureSec.xf_dict.keys:
             print('  Warning: feature [%s] not valid'%(feature))
             return 0.0
 
@@ -471,7 +471,7 @@ class fFeature():
             dMw[i] = (mu[i+1]-mu[i])/(xx[i+1]-xx[i])
             dMw[i] = min(dMw[i], 2)
 
-        flag = fFeature.check_singleshock(xx, mu, dMw)
+        flag = FeatureSec.check_singleshock(xx, mu, dMw)
         if not flag==1:
             return
 
