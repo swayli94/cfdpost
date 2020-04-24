@@ -21,7 +21,6 @@ CFD post procedures.
         j : 1 - nj  far field of lower surface TE to far field of upper surface TE
         k : 1 - nk  surface to far field
 
-
 ## # cfdresult
 
     Read in CFD results.
