@@ -37,6 +37,14 @@ CFD post procedures.
         cst_modeling    pip install cst-modeling3d
         xfoil           pip install xfoil
 
+    XFoil:
+        Re:     Reynolds number in case the simulation is for a viscous flow. 
+                In case not informed, the code will assume inviscid.
+        Minf:   Mach number in case the simulation has to take in account compressibility 
+                effects through the Prandtl-Glauert correlation. If not informed, 
+                the code will not use the correction. For logical reasons, if Mach 
+                is informed, a Reynolds number different from zero must also be informed.
+
 ## # cfdresult
 
     Read in CFD results.
