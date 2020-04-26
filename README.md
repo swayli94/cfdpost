@@ -45,6 +45,18 @@ CFD post procedures.
                 the code will not use the correction. For logical reasons, if Mach 
                 is informed, a Reynolds number different from zero must also be informed.
 
+### [ feature_TSFoil ]
+
+    Evaluate by TSFOIL2 and extract features.
+        cst-u, cst-l:   list of upper/lower CST coefficients of the airfoil
+        t:      airfoil thickness or None
+        Minf, Re, AoA (deg): flight condition (s), float or list
+        fname:  output file
+
+    Dependencies:
+        cst_modeling    pip install cst-modeling3d
+        pyTSFoil        pip install pyTSFoil
+
 ## # cfdresult
 
     Read in CFD results.
@@ -64,3 +76,7 @@ CFD post procedures.
 ### FeatureXfoil
 
     Extract features from Xfoil (low speed) results.
+
+### FeatureTSFoil
+
+    Extract features from pyTSFoil (transonic speed) results.
