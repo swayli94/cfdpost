@@ -482,12 +482,11 @@ class FeatureSec():
         Locate the index and position of shock wave related flow features. \n
             dMwcri_1: critical value locating shock wave front
 
-        Shock: 1, 3, F, U, N, Hi, Hc
+        Shock: 1, 3, F, U
         '''
         X   = self.x
         xx  = self.xx
         mu  = self.mu
-        hu  = self.hu
         nn  = xx.shape[0]
         iLE = self.iLE
 
@@ -547,6 +546,21 @@ class FeatureSec():
         x_U = xx[i_U]
         self.xf_dict['U'][1] = np.argmin(np.abs(X[iLE:]-x_U)) + iLE
         self.xf_dict['U'][2] = x_U
+
+        return i_1
+
+    def locate_BL(self, i_1):
+        '''
+        Locate the index and position of boundary layer related flow features. \n
+            i-1: index of shock wave front position in self.xx
+
+        Shock: N, Hi, Hc
+        '''
+        X   = self.x
+        xx  = self.xx
+        hu  = self.hu
+        nn  = xx.shape[0]
+        iLE = self.iLE
 
         #* Hi, Hc => position of maximum Hi, Hc after shock wave front
         # For cases when shock wave is weak, and Hc just keeps growing, set 0
@@ -678,7 +692,8 @@ class FeatureSec():
         self.locate_basic()
         self.locate_sep()
         self.locate_geo()
-        self.locate_shock()
+        i_1 = self.locate_shock()
+        self.locate_BL(i_1)
         self.aux_features()
 
     #TODO: output features
@@ -717,6 +732,7 @@ class FeatureSec():
                 f.write('%10s   %15.6f \n'%(name, value))
 
         f.close()
+
 
 class FeatureXfoil(FeatureSec):
     '''
@@ -766,7 +782,6 @@ class FeatureXfoil(FeatureSec):
         self.locate_basic()
         self.locate_geo()
 
-    #TODO: output features
     def output_features(self, fname="feature-xfoil.txt", append=True):
         '''
         Output all features to file.
@@ -800,6 +815,92 @@ class FeatureXfoil(FeatureSec):
 
         f.close()
 
+
+class FeatureTSFoil(FeatureSec):
+    '''
+    Extract features from pyTSFoil (transonic speed) results.
+    '''
+    def __init__(self, Minf, AoA, Re):
+        super().__init__(Minf, AoA, Re)
+
+    def setdata(self, xu, yu, xl, yl, cpu, cpl, mwu, mwl):
+        '''
+        Set the data of this foil or section.   \n
+            xu, yu, xl, yl, cpu, cpl:   ndarray from pyTSFoil
+            mwu, mwl:   ndarray from pyTSFoil (do not need built-in Cp2Mw)
+        '''
+        cp1u = cpu[-1] + (1-xu[-2])/(xu[-1]-xu[-2])*(cpu[-1]-cpu[-2])
+        cp1l = cpl[-1] + (1-xl[-2])/(xl[-1]-xl[-2])*(cpl[-1]-cpl[-2])
+        cp1 = 0.5*(cp1u+cp1l)
+
+        mw1u = mwu[-1] + (1-xu[-2])/(xu[-1]-xu[-2])*(mwu[-1]-mwu[-2])
+        mw1l = mwl[-1] + (1-xl[-2])/(xl[-1]-xl[-2])*(mwl[-1]-mwl[-2])
+        mw1 = 0.5*(mw1u+mw1l)
+
+        self.x  = np.array([1.0]+list(reversed(list(xl[1:]))) + list(xu)+[1.0])
+        self.y  = np.array([0.0]+list(reversed(list(yl[1:]))) + list(yu)+[0.0])
+        self.Cp = np.array([cp1]+list(reversed(list(cpl[1:]))) + list(cpu)+[cp1])
+        self.Mw = np.array([mw1]+list(reversed(list(mwl[1:]))) + list(mwu)+[mw1])
+
+        iLE = np.argmin(self.x)
+
+        fmw = interp1d(self.x[iLE:], self.Mw[iLE:], kind='cubic')
+        gu  = interp1d(self.x[iLE:], self.y [iLE:], kind='cubic')
+        x_  = np.append(self.x[iLE:0:-1], self.x[0])
+        y_  = np.append(self.y[iLE:0:-1], self.y[0])
+        gl  = interp1d(x_, y_, kind='cubic')
+
+        self.xx = np.arange(0.0, 1.0, 0.001)
+        self.yu = gu(self.xx)
+        self.yl = gl(self.xx)
+        self.mu = fmw(self.xx)
+
+        self.iLE = iLE
+
+    def extract_features(self):
+        '''
+        Extract flow features list in the dictionart.
+        '''
+        self.locate_basic()
+        self.locate_geo()
+        self.locate_shock()
+        self.aux_features()
+
+    def output_features(self, fname="feature2d.txt", append=True):
+        '''
+        Output all features to file.
+
+        Output order: \n
+            feature:    keys of feature dictionary
+            key:        'X', 'Mw', 'Cp'
+        '''
+
+        keys = ['X','Mw','Cp']
+        features = ['L', 'T', 'Q', 'M', 'F', '1', 'U', '3',
+                    'Cu', 'Cl', 'tu', 'tl', 'tm', 'L13',
+                    'lSW', 'DCp', 'Err', 'CLU', 'kaf']
+
+        if not os.path.exists(fname):
+            append = False
+
+        if not append:
+            f = open(fname, 'w')
+        else:
+            f = open(fname, 'a')
+
+        for feature in self.xf_dict.keys():
+            
+            if len(self.xf_dict[feature])==2:
+                value = self.getValue(feature)
+                f.write('%10s   %15.6f \n'%(feature, value))
+                continue
+
+            for key in keys:
+                name = key+'-'+feature
+                value = self.getValue(feature, key)
+                f.write('%10s   %15.6f \n'%(name, value))
+
+        f.close()
 
 
 #TODO: ========================================

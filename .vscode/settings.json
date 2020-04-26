@@ -3,11 +3,13 @@
         "Glauert",
         "Mwcri",
         "Prandtl",
+        "Sfoil",
         "cfdpost",
         "cfdresult",
         "curv",
         "dudy",
         "nspan",
-        "readprt"
+        "readprt",
+        "tsfoil"
     ]
 }

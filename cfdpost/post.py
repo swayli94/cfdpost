@@ -2,7 +2,9 @@
 import numpy as np
 
 from cfdpost.cfdresult import cfl3d
-from cfdpost.feature2d import FeatureSec, FeatureXfoil
+from cfdpost.feature2d import FeatureSec, FeatureXfoil, FeatureTSFoil
+
+import matplotlib.pyplot as plt
 
 
 def post_foil_cfl3d(path, j0, j1, nHi=40, fname='feature2d.txt'):
@@ -49,7 +51,7 @@ def post_foil_cfl3d(path, j0, j1, nHi=40, fname='feature2d.txt'):
 
     # succeed = cfl3d.readprt('path')
 
-def feature_xfoil(cst_u: list, cst_l: list, t: float, Minf: float, Re, AoA, n_crit=0.1, fname='feature-xfoil.txt'):
+def feature_xfoil(cst_u: list, cst_l: list, t, Minf: float, Re, AoA, n_crit=0.1, fname='feature-xfoil.txt'):
     '''
     Evaluate by xfoil and extract features. \n
         cst-u, cst-l:   list of upper/lower CST coefficients of the airfoil.
@@ -60,7 +62,7 @@ def feature_xfoil(cst_u: list, cst_l: list, t: float, Minf: float, Re, AoA, n_cr
         fname:  output file.
 
     Dependencies: \n
-        cst_modeling, xfoil
+        cst-modeling3d, xfoil
     '''
 
     from cst_modeling.foil import cst_foil
@@ -125,6 +127,63 @@ def feature_xfoil(cst_u: list, cst_l: list, t: float, Minf: float, Re, AoA, n_cr
         f.close()
 
         fF.output_features(fname=fname, append=True)
+
+def feature_TSFoil(cst_u: list, cst_l: list, t, Minf, Re, AoA, fname='feature-xfoil.txt'):
+    '''
+    Evaluate by TSFOIL2 and extract features. \n
+        cst-u, cst-l:   list of upper/lower CST coefficients of the airfoil
+        t:      airfoil thickness or None
+        Minf, Re, AoA (deg): flight condition (s), float or list
+        fname:  output file.
+
+    Dependencies: \n
+        cst-modeling3d, pyTSFoil
+    '''
+
+    from pyTSFoil.TSfoil import TSfoil
+
+    ts = TSfoil()
+    ts.foil_byCST(cst_u, cst_l, t=t)
+
+    #TODO: Calculation
+    if not isinstance(Minf, list):
+        Minf = [Minf]
+        Re = [Re]
+        AoA = [AoA]
+
+    n = len(Re)
+    for i in range(n):
+
+        ts.flight_condition(Minf[i], AoA[i], Re=Re[i], wc=20.0)
+        ts.run(show=False)
+        ts.get_result()
+
+        print(Minf[i], AoA[i], Re[i], ts.CL)
+
+        #* Extract features
+        fF = FeatureTSFoil(Minf[i], AoA[i], Re[i])
+        fF.setdata(ts.xu, ts.yu, ts.xl, ts.yl, ts.cpu, ts.cpl, ts.mwu, ts.mwl)
+        fF.extract_features()
+
+        #* Output
+        if i == 0:
+            f = open(fname, 'w')
+        else:
+            f = open(fname, 'a')
+        
+        f.write('\n')
+        f.write('%10s   %15.6f \n'%('Minf', Minf[i]))
+        f.write('%10s   %15.6f \n'%('AoA', AoA[i]))
+        f.write('%10s   %15.6f \n'%('Re', Re[i]/1e6))
+        f.write('%10s   %15.6f \n'%('CL', ts.CL))
+        f.write('%10s   %15.6f \n'%('Cd', ts.Cd))
+        f.write('%10s   %15.6f \n'%('Cdw', ts.Cdw))
+        f.write('%10s   %15.6f \n'%('Cm', ts.Cm))
+        f.close()
+
+        fF.output_features(fname=fname, append=True)
+
+
 
 
 
