@@ -7,13 +7,15 @@ from cfdpost.feature2d import FeatureSec, FeatureXfoil, FeatureTSFoil
 import matplotlib.pyplot as plt
 
 
-def post_foil_cfl3d(path, j0, j1, nHi=40, fname='feature2d.txt'):
+def post_foil_cfl3d(path, j0, j1, nHi=40, fname='feature2d.txt', tecplot=False):
     '''
     Read in CFL3D foil result and extract flow features. \n
         path:   folder that contains the output files
         j0:     j index of the lower surface TE
         j1:     j index of the upper surface TE
         nHi:    maximum number of mesh points in k direction for boundary layer
+        fname:  output file name. If None, then no output
+        tecplot:    True, then convert cfl3d.prt to surface.dat
 
     Single C-block cfl3d.prt index \n
         i : 1 - 1   symmetry plane
@@ -34,6 +36,8 @@ def post_foil_cfl3d(path, j0, j1, nHi=40, fname='feature2d.txt'):
     if not succeed1:
         AoA = AoA0
 
+    print(Minf, AoA, Re*1e6, CL)
+
     if not succeed2 or not succeed3:
         print('  CFD output file corrupted. '+path)
         return
@@ -44,12 +48,17 @@ def post_foil_cfl3d(path, j0, j1, nHi=40, fname='feature2d.txt'):
     Hi, Hc, info = FeatureSec.getHi(X,Y,U,V,T,j0=j0,j1=j1,nHi=nHi)
     (Tw, dudy) = info
 
-    fF = FeatureSec(Minf, AoA, Re)
+    fF = FeatureSec(Minf, AoA, Re*1e6)
     fF.setdata(x, y, Cp1, Tw, Hi, Hc, dudy)
     fF.extract_features()
-    fF.output_features(fname=fname, append=True, keys_=None)
 
-    # succeed = cfl3d.readprt('path')
+    if fname is not None:
+        fF.output_features(fname=fname, append=True, keys_=None)
+
+    if tecplot:
+        succeed = cfl3d.readprt('path')
+
+    return fF
 
 def feature_xfoil(cst_u: list, cst_l: list, t, Minf: float, Re, AoA, n_crit=0.1, fname='feature-xfoil.txt'):
     '''
@@ -59,7 +68,7 @@ def feature_xfoil(cst_u: list, cst_l: list, t, Minf: float, Re, AoA, n_crit=0.1,
         Minf:   free stream Mach number for wall Mach number calculation
         Re, AoA (deg): flight condition (s), float or list, for Xfoil
         n_crit: critical amplification ratio for transition in xfoil
-        fname:  output file.
+        fname:  output file name. If None, then no output
 
     Dependencies: \n
         cst-modeling3d, xfoil
@@ -112,6 +121,9 @@ def feature_xfoil(cst_u: list, cst_l: list, t, Minf: float, Re, AoA, n_crit=0.1,
         fF.extract_features()
 
         #* Output
+        if fname is None:
+            continue
+
         if i == 0:
             f = open(fname, 'w')
         else:
@@ -136,7 +148,7 @@ def feature_TSFoil(cst_u: list, cst_l: list, t, Minf, Re, AoA, fname='feature-xf
         cst-u, cst-l:   list of upper/lower CST coefficients of the airfoil
         t:      airfoil thickness or None
         Minf, Re, AoA (deg): flight condition (s), float or list
-        fname:  output file.
+        fname:  output file name. If None, then no output
 
     Dependencies: \n
         cst-modeling3d, pyTSFoil
@@ -156,7 +168,7 @@ def feature_TSFoil(cst_u: list, cst_l: list, t, Minf, Re, AoA, fname='feature-xf
     n = len(Re)
     for i in range(n):
 
-        ts.flight_condition(Minf[i], AoA[i], Re=Re[i], wc=20.0)
+        ts.flight_condition(Minf[i], AoA[i], Re=Re[i], wc=4.0)
         ts.run(show=False)
         ts.get_result()
 
@@ -168,6 +180,9 @@ def feature_TSFoil(cst_u: list, cst_l: list, t, Minf, Re, AoA, fname='feature-xf
         fF.extract_features()
 
         #* Output
+        if fname is None:
+            continue
+
         if i == 0:
             f = open(fname, 'w')
         else:

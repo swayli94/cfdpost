@@ -126,7 +126,10 @@ class FeatureSec():
         Cp_ref = self.IsentropicCp(Ma_ref, self.Minf)
         f = interp1d(Cp_ref, Ma_ref, kind='cubic')
 
-        return f(self.Cp)
+        Cp_ = self.Cp.copy()
+        Cp_ = np.clip(Cp_, Cp_ref[-1], Cp_ref[0])
+
+        return f(Cp_)
 
     @staticmethod
     def ShapeFactor(sS, VtS, Tw: float, iUe: int):
@@ -500,7 +503,7 @@ class FeatureSec():
         flag = FeatureSec.check_singleshock(xx, mu, dMw)
         self.xf_dict['lSW'][1] = flag
         if not flag==1:
-            return
+            return 0
 
         #* F => shock foot position
         i_F = np.argmin(dMw)
@@ -833,14 +836,17 @@ class FeatureTSFoil(FeatureSec):
         cp1l = cpl[-1] + (1-xl[-2])/(xl[-1]-xl[-2])*(cpl[-1]-cpl[-2])
         cp1 = 0.5*(cp1u+cp1l)
 
-        mw1u = mwu[-1] + (1-xu[-2])/(xu[-1]-xu[-2])*(mwu[-1]-mwu[-2])
-        mw1l = mwl[-1] + (1-xl[-2])/(xl[-1]-xl[-2])*(mwl[-1]-mwl[-2])
-        mw1 = 0.5*(mw1u+mw1l)
-
         self.x  = np.array([1.0]+list(reversed(list(xl[1:]))) + list(xu)+[1.0])
         self.y  = np.array([0.0]+list(reversed(list(yl[1:]))) + list(yu)+[0.0])
         self.Cp = np.array([cp1]+list(reversed(list(cpl[1:]))) + list(cpu)+[cp1])
+        
+        '''
+        mw1u = mwu[-1] + (1-xu[-2])/(xu[-1]-xu[-2])*(mwu[-1]-mwu[-2])
+        mw1l = mwl[-1] + (1-xl[-2])/(xl[-1]-xl[-2])*(mwl[-1]-mwl[-2])
+        mw1 = 0.5*(mw1u+mw1l)
         self.Mw = np.array([mw1]+list(reversed(list(mwl[1:]))) + list(mwu)+[mw1])
+        '''
+        self.Mw = self.Cp2Mw()
 
         iLE = np.argmin(self.x)
 

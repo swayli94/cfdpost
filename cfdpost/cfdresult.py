@@ -113,6 +113,10 @@ class cfl3d():
         with open(out, 'r') as f:
             lines = f.readlines()
 
+            if len(lines)==0:
+                f.close()
+                return False, AoA
+
             for k in range(n):
                 L1 = lines[-k-1].split()
                 AoAs[k] = float(L1[3])

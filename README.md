@@ -11,10 +11,12 @@ CFD post procedures.
     post_foil_cfl3d(path, j0, j1, nHi=40, fname='feature2d.txt')
 
     Read in CFL3D foil result and extract flow features.
-        path:   folder that contains the output files
-        j0:     j index of the lower surface TE
-        j1:     j index of the upper surface TE
-        nHi:    maximum number of mesh points in k direction for boundary layer
+        path:       folder that contains the output files
+        j0:         j index of the lower surface TE
+        j1:         j index of the upper surface TE
+        nHi:        maximum number of mesh points in k direction for boundary layer
+        fname:      output file name. If None, then no output
+        tecplot:    if True, then convert cfl3d.prt to surface.dat
 
     Single C-block cfl3d.prt index
         i : 1 - 1   symmetry plane
@@ -31,7 +33,7 @@ CFD post procedures.
         Minf:           free stream Mach number for wall Mach number calculation
         Re, AoA (deg):  flight condition (s), float or list, for Xfoil
         n_crit:         critical amplification ratio for transition in xfoil
-        fname:          output file
+        fname:  output file name. If None, then no output
 
     Dependencies:
         cst_modeling    pip install cst-modeling3d
@@ -51,7 +53,7 @@ CFD post procedures.
         cst-u, cst-l:   list of upper/lower CST coefficients of the airfoil
         t:      airfoil thickness or None
         Minf, Re, AoA (deg): flight condition (s), float or list
-        fname:  output file
+        fname:  output file name. If None, then no output
 
     Dependencies:
         cst_modeling    pip install cst-modeling3d
