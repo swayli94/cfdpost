@@ -128,6 +128,8 @@ def feature_xfoil(cst_u: list, cst_l: list, t, Minf: float, Re, AoA, n_crit=0.1,
 
         fF.output_features(fname=fname, append=True)
 
+    return fF
+
 def feature_TSFoil(cst_u: list, cst_l: list, t, Minf, Re, AoA, fname='feature-xfoil.txt'):
     '''
     Evaluate by TSFOIL2 and extract features. \n
@@ -183,7 +185,7 @@ def feature_TSFoil(cst_u: list, cst_l: list, t, Minf, Re, AoA, fname='feature-xf
 
         fF.output_features(fname=fname, append=True)
 
-
+    return fF
 
 
 
