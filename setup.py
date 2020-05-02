@@ -13,6 +13,7 @@ setup(name=__name__,
       license='MIT',
       author='Runze LI',
       author_email='swayli94@gmail.com',
+      packages=find_packages(exclude=['example']),
       install_requires=['numpy', 'scipy'],
       classifiers=[
             'Programming Language :: Python :: 3'

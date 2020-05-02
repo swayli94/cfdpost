@@ -37,6 +37,7 @@ class FeatureSec():
         'U': ['local sonic', _i, _X],               # local sonic position
                                                     # Note: for weak shock waves, may not reach Mw=1
                                                     #       define position of U as Mw minimal extreme point after shock foot
+        'A': ['maximum Mw after shock', _i, _X],    # maximum wall Mach number after shock wave (or equal to 3)
         'N': ['new flat boundary', _i, _X],         # starting position of new flat boundary
         'Hi':  ['maximum Hi', _i, _X],              # position of maximum Hi
         'Hc':  ['maximum Hc', _i, _X],              # position of maximum Hc
@@ -525,7 +526,7 @@ class FeatureSec():
         self.xf_dict['1'][2] = x_1
 
         #* 3 => position of just downstream the shock
-        # Find the first flat position of Mw in range [x_F+0.2, x_F], defined as dMw = 0 or -1
+        # Find the first flat position of Mw in range [x_F, x_F+0.2], defined as dMw = 0 or -1
         i_3 = 0
         for i in np.arange(i_F, nn-1, 1):
             if xx[i]>x_F+0.2:
@@ -549,6 +550,21 @@ class FeatureSec():
         x_U = xx[i_U]
         self.xf_dict['U'][1] = np.argmin(np.abs(X[iLE:]-x_U)) + iLE
         self.xf_dict['U'][2] = x_U
+
+        #* A => maximum Mw after shock
+        # Find the maximum position of Mw in range [x_F, x_F+0.4]
+        i_A = 0
+        max_A = 0.0
+        for i in np.arange(i_F, nn-1, 1):
+            if xx[i]>x_F+0.4:
+                break
+            if mu[i]>max_A:
+                i_A = i
+                max_A = mu[i]
+
+        x_A = xx[i_A]
+        self.xf_dict['A'][1] = np.argmin(np.abs(X[iLE:]-x_A)) + iLE
+        self.xf_dict['A'][2] = x_A
 
         return i_1
 
