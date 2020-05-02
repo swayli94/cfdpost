@@ -552,11 +552,11 @@ class FeatureSec():
         self.xf_dict['U'][2] = x_U
 
         #* A => maximum Mw after shock
-        # Find the maximum position of Mw in range [x_F, x_F+0.4]
+        # Find the maximum position of Mw in range [x_3, x_3+0.4]
         i_A = 0
         max_A = 0.0
-        for i in np.arange(i_F, nn-1, 1):
-            if xx[i]>x_F+0.4:
+        for i in np.arange(i_3, nn-1, 1):
+            if xx[i]>x_3+0.4:
                 break
             if mu[i]>max_A:
                 i_A = i
