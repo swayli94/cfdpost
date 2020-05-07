@@ -350,6 +350,8 @@ class cfl3d():
         if not os.path.exists(prt):
             return False, None, None
 
+        X = None
+
         f0 = open(prt, 'r')
         while True:
 
@@ -396,6 +398,9 @@ class cfl3d():
                     vi[j,k] = float(L1[13])
 
             break
+
+        if X is None:
+            return False, None, None
 
         field = (X,Y,U,V,P,T,Ma,Cp,vi)
         f0.close()

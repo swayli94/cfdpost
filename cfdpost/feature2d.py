@@ -39,6 +39,7 @@ class FeatureSec():
                                                     #       define position of U as Mw minimal extreme point after shock foot
         'A': ['maximum Mw after shock', _i, _X],    # maximum wall Mach number after shock wave (or equal to 3)
         'N': ['new flat boundary', _i, _X],         # starting position of new flat boundary
+                                                    # most of the time, A == N
         'Hi':  ['maximum Hi', _i, _X],              # position of maximum Hi
         'Hc':  ['maximum Hc', _i, _X],              # position of maximum Hc
         
