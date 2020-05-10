@@ -546,16 +546,21 @@ class FeatureSec():
         #* D => dent on the suction plateau
         # minimum Mw between L and 1
         x_L = max(self.xf_dict['L'][2], 0.19)
+        i_D = 0
 
+        min_D = 10.0
         for i in np.arange(2, i_1-1, 1):
 
             if xx[i]<x_L:
                 continue
 
-            if mu[i-1]>=mu[i] and mu[i]<=mu[i+1]:
-                self.xf_dict['D'][1] = i
-                self.xf_dict['D'][2] = X[i]
-                break
+            if mu[i-1]>=mu[i] and mu[i]<=mu[i+1] and mu[i]<min_D:
+                i_D = i
+                min_D = mu[i]
+
+        x_D = xx[i_D]
+        self.xf_dict['D'][1] = np.argmin(np.abs(X[iLE:]-x_D)) + iLE
+        self.xf_dict['D'][2] = x_D
 
         #* U => local sonic position
         i_U = 0
