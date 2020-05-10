@@ -34,6 +34,7 @@ class FeatureSec():
         'F': ['shock foot', _i, _X],                # shock foot position
         '1': ['shock front', _i, _X],               # shock wave front position
         '3': ['shock hind', _i, _X],                # position of just downstream the shock
+        'D': ['dent on plateau', _i, _X],           # dent on the suction plateau
         'U': ['local sonic', _i, _X],               # local sonic position
                                                     # Note: for weak shock waves, may not reach Mw=1
                                                     #       define position of U as Mw minimal extreme point after shock foot
@@ -348,7 +349,7 @@ class FeatureSec():
 
         #TODO: Basic features
         #* L => suction peak near leading edge on upper surface
-        for i in range(int(0.2*nn)):
+        for i in range(int(0.25*nn)):
             ii = i + iLE
             if M[ii-1]<=M[ii] and M[ii]>=M[ii+1]:
                 self.xf_dict['L'][1] = ii
@@ -541,6 +542,20 @@ class FeatureSec():
         x_3 = xx[i_3]
         self.xf_dict['3'][1] = np.argmin(np.abs(X[iLE:]-x_3)) + iLE
         self.xf_dict['3'][2] = x_3
+
+        #* D => dent on the suction plateau
+        # minimum Mw between L and 1
+        x_L = max(self.xf_dict['L'][2], 0.19)
+
+        for i in np.arange(2, i_1-1, 1):
+
+            if xx[i]<x_L:
+                continue
+
+            if mu[i-1]>=mu[i] and mu[i]<=mu[i+1]:
+                self.xf_dict['D'][1] = i
+                self.xf_dict['D'][2] = X[i]
+                break
 
         #* U => local sonic position
         i_U = 0
