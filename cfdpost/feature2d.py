@@ -7,6 +7,7 @@ import os
 import numpy as np
 from scipy.interpolate import interp1d
 
+
 class FeatureSec():
     '''
     Extracting flow features of a section (features on/near the wall)
@@ -349,12 +350,32 @@ class FeatureSec():
 
         #TODO: Basic features
         #* L => suction peak near leading edge on upper surface
+        # 1: maximum extreme point
+        # 2: outermost point in X + Mw = 0 direction
+        i_L = 0
+        x_L = 0.0
         for i in range(int(0.25*nn)):
             ii = i + iLE
             if M[ii-1]<=M[ii] and M[ii]>=M[ii+1]:
-                self.xf_dict['L'][1] = ii
-                self.xf_dict['L'][2] = X[ii]
+                i_L = ii
+                x_L = X[ii]
                 break
+
+        if i_L == 0:
+            max_L = -1.0e6
+            vec = np.array([-1.0,1.0])
+
+            for i in range(int(0.25*nn)):
+                ii = i + iLE
+                vv = np.array([X[ii], M[ii]])
+                dd = np.dot(vv, vec)
+                if dd > max_L:
+                    max_L = dd
+                    i_L = ii
+                    x_L = X[ii]
+
+        self.xf_dict['L'][1] = i_L
+        self.xf_dict['L'][2] = x_L
 
         #* T => trailing edge upper surface (98% chord length)
         for i in range(int(0.2*nn)):
@@ -649,7 +670,7 @@ class FeatureSec():
         dm = dMw.copy()
         i1 = np.argmin(dm)
         d1 = dm[i1]
-        
+
         # Check if shockless
         if Mw[i1]<1.0 or dm[i1]>dMwcri_F:
             return 0
@@ -660,15 +681,14 @@ class FeatureSec():
                 dm[i]=0.0
             else:
                 break
-
         for i in np.arange(i1, 0, -1, dtype=int):
             if dm[i]<=0.0:
                 dm[i]=0.0
             else:
                 break
-        
+
         i2 = np.argmin(dm)
-        if Mw[i1]>1.0 and dm[i1]<max(dMwcri_F, 0.5*d1):
+        if Mw[i2]>1.0 and dm[i2]<max(dMwcri_F, 0.5*d1):
             return -1
 
         return 1
