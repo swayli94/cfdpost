@@ -5,3 +5,5 @@ build/
 
 Calculation/
 *.txt
+
+example/test/
