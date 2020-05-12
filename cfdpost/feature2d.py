@@ -566,9 +566,8 @@ class FeatureSec():
 
         #* D => dent on the suction plateau
         # minimum Mw between L and 1
-        x_L = max(self.xf_dict['L'][2], 0.19)
+        x_L = max(self.xf_dict['L'][2], 0.05)
         i_D = 0
-
         min_D = 10.0
         for i in np.arange(2, i_1-1, 1):
 
