@@ -322,15 +322,15 @@ class FeatureSec():
             return 0.0
 
         if ii >= self.iLE:
-            i0 = max(self.iLE, ii-2)
-            i1 = i0 + 5
+            i0 = max(self.iLE, ii-4)
+            i1 = i0 + 7
         else:
-            i1 = min(self.iLE, ii+3)
-            i0 = i1 - 5
+            i1 = min(self.iLE, ii+4)
+            i0 = i1 - 7
 
-        i1 = i0 + 5
         X = self.x[i0:i1]
         Y = yy[i0:i1]
+
         f = interp1d(X, Y, kind='cubic')
 
         return f(xx)
@@ -612,7 +612,8 @@ class FeatureSec():
     def locate_BL(self, i_1):
         '''
         Locate the index and position of boundary layer related flow features. \n
-            i-1: index of shock wave front position in self.xx
+        
+        i-1: index of shock wave front position in self.xx
 
         Shock: N, Hi, Hc
         '''
@@ -626,11 +627,15 @@ class FeatureSec():
         # For cases when shock wave is weak, and Hc just keeps growing, set 0
         i_H = 0
         max1 = 0.0
-        for i in np.arange(i_1, nn-1, 1):
+        for i in np.arange(i_1, nn-2, 1):
+
+            if xx[i] > 0.95:
+                break
+
             if hu[i-1]<=hu[i] and hu[i+1]<=hu[i] and hu[i]>max1:
                 max1 = hu[i]
                 i_H = i
-
+                
         x_H = xx[i_H]
         self.xf_dict['Hc'][1] = np.argmin(np.abs(X[iLE:]-x_H)) + iLE
         self.xf_dict['Hc'][2] = x_H
