@@ -9,18 +9,24 @@ import matplotlib.pyplot as plt
 
 def post_foil_cfl3d(path, j0, j1, nHi=40, fname='feature2d.txt', tecplot=False):
     '''
-    Read in CFL3D foil result and extract flow features. \n
-        path:   folder that contains the output files
-        j0:     j index of the lower surface TE
-        j1:     j index of the upper surface TE
-        nHi:    maximum number of mesh points in k direction for boundary layer
-        fname:  output file name. If None, then no output
-        tecplot:    True, then convert cfl3d.prt to surface.dat
+    Read in CFL3D foil result and extract flow features.
 
-    Single C-block cfl3d.prt index \n
-        i : 1 - 1   symmetry plane
-        j : 1 - nj  far field of lower surface TE to far field of upper surface TE
-        k : 1 - nk  surface to far field
+    Inputs:
+    ---
+    path:   folder that contains the output files \n
+    j0:     j index of the lower surface TE \n
+    j1:     j index of the upper surface TE \n
+    nHi:    maximum number of mesh points in k direction for boundary layer \n
+    fname:  output file name. If None, then no output \n
+    tecplot:    True, then convert cfl3d.prt to surface.dat \n
+
+    Single C-block cfl3d.prt index
+    ---
+    ```text
+    i : 1 - 1   symmetry plane
+    j : 1 - nj  far field of lower surface TE to far field of upper surface TE
+    k : 1 - nk  surface to far field
+    ```
     '''
 
     converge, CL, CD, Cm, CDp, CDf = cfl3d.readCoef(path)
@@ -62,16 +68,18 @@ def post_foil_cfl3d(path, j0, j1, nHi=40, fname='feature2d.txt', tecplot=False):
 
 def feature_xfoil(cst_u: list, cst_l: list, t, Minf: float, Re, AoA, n_crit=0.1, fname='feature-xfoil.txt'):
     '''
-    Evaluate by xfoil and extract features. \n
-        cst-u, cst-l:   list of upper/lower CST coefficients of the airfoil.
-        t:      airfoil thickness or None
-        Minf:   free stream Mach number for wall Mach number calculation
-        Re, AoA (deg): flight condition (s), float or list, for Xfoil
-        n_crit: critical amplification ratio for transition in xfoil
-        fname:  output file name. If None, then no output
+    Evaluate by xfoil and extract features.
 
-    Dependencies: \n
-        cst-modeling3d, xfoil
+    Inputs:
+    ---
+    cst-u, cst-l:   list of upper/lower CST coefficients of the airfoil. \n
+    t:      airfoil thickness or None \n
+    Minf:   free stream Mach number for wall Mach number calculation \n
+    Re, AoA (deg): flight condition (s), float or list, for Xfoil \n
+    n_crit: critical amplification ratio for transition in xfoil \n
+    fname:  output file name. If None, then no output \n
+
+    ### Dependencies: cst-modeling3d, xfoil  
     '''
 
     from cst_modeling.foil import cst_foil
@@ -144,14 +152,16 @@ def feature_xfoil(cst_u: list, cst_l: list, t, Minf: float, Re, AoA, n_crit=0.1,
 
 def feature_TSFoil(cst_u: list, cst_l: list, t, Minf, Re, AoA, fname='feature-xfoil.txt'):
     '''
-    Evaluate by TSFOIL2 and extract features. \n
-        cst-u, cst-l:   list of upper/lower CST coefficients of the airfoil
-        t:      airfoil thickness or None
-        Minf, Re, AoA (deg): flight condition (s), float or list
-        fname:  output file name. If None, then no output
+    Evaluate by TSFOIL2 and extract features.
 
-    Dependencies: \n
-        cst-modeling3d, pyTSFoil
+    Inputs:
+    ---
+    cst-u, cst-l:   list of upper/lower CST coefficients of the airfoil \n
+    t:      airfoil thickness or None \n
+    Minf, Re, AoA (deg): flight condition (s), float or list \n
+    fname:  output file name. If None, then no output \n
+
+    ### Dependencies: cst-modeling3d, pyTSFoil
     '''
 
     from pyTSFoil.TSfoil import TSfoil

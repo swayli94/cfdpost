@@ -51,6 +51,7 @@ class FeatureSec():
         'lSW': ['single shock', _value],            # single shock wave flag
         'DCp': ['shock strength', _value],          # Cp change through shock wave
         'Err': ['suc Cp area', _value],             # Cp integral of suction plateau fluctuation
+        'DMp': ['Mw dent on plateau', _value],      # Mw dent on suction plateau
         'CLU': ['upper CL', _value],                # CL of upper surface
         'kaf': ['slope aft', _value]                # average Mw slope of the aft upper surface (3/N~T)
     }
@@ -68,8 +69,9 @@ class FeatureSec():
 
     def setdata(self, x, y, Cp, Tw, Hi, Hc, dudy):
         '''
-        Set the data of this foil or section.   \n
-            Data:   ndarray, start from lower surface trailing edge
+        Set the data of this foil or section.
+
+        Data:   ndarray, start from lower surface trailing edge
         '''
         self.x = copy.deepcopy(x)
         self.y = copy.deepcopy(y)
@@ -112,9 +114,12 @@ class FeatureSec():
     def IsentropicCp(Ma, Minf: float, g=1.4):
         ''' 
         Isentropic flow: Calculate Cp by Mach \n
-            Ma:     float, or ndarray
-            Minf:   free stream Mach number
-            g:      γ=1.4, ratio of the specific heats
+
+        Inputs:
+        ---
+        Ma:     float, or ndarray \n
+        Minf:   free stream Mach number \n
+        g:      γ=1.4, ratio of the specific heats \n
         '''
         X = (2.0+(g-1.0)*Minf**2)/(2.0+(g-1.0)*Ma**2)
         X = X**(g/(g-1.0))
@@ -138,26 +143,33 @@ class FeatureSec():
     @staticmethod
     def ShapeFactor(sS, VtS, Tw: float, iUe: int):
         '''
-        Calculate shape factor Hi & Hc by mesh points on a line pertenticular to the wall. \n
-            sS:     ndarray (n), distance of mesh points to wall
-            VtS:    ndarray (n), velocity component of mesh points (parallel to the wall)
-            Tw:     wall temperature (K)
-            iUe:    index of mesh point locating the outer velocity Ue
+        Calculate shape factor Hi & Hc by mesh points on a line pertenticular to the wall.
 
-        Return: \n
-            Hi:     incompressible shape factor
-            Hc:     compressible shape factor
+        Inputs:
+        ---
+        sS:     ndarray (n), distance of mesh points to wall \n
+        VtS:    ndarray (n), velocity component of mesh points (parallel to the wall) \n
+        Tw:     wall temperature (K) \n
+        iUe:    index of mesh point locating the outer velocity Ue \n
 
-        Note: \n
-            XR  => 物面参考点，考察以 XR 为起点，物面法向 nR 方向上的数据点，共 nHi 个数据点
-            sS  => 数据点到物面距离
-            VtS => 数据点速度在物面方向的分量
+        Return:
+        ---
+        Hi:     incompressible shape factor \n
+        Hc:     compressible shape factor \n
 
-            se:     distance of boundary layer outer boundary to wall
-            ds:     𝛿*, displacement thickness
-            tt:     θ, momentum loss thickness
-            Ue:     outer layer velocity component (parallel to the wall)
-            Ue      测试结果显示，直接取最大Ue较为合理，取一定范围内平均，或取固定网格的值，效果不好
+        Note:
+        ---
+        ```text
+        XR  => 物面参考点，考察以 XR 为起点，物面法向 nR 方向上的数据点，共 nHi 个数据点
+        sS  => 数据点到物面距离
+        VtS => 数据点速度在物面方向的分量
+
+        se:     distance of boundary layer outer boundary to wall
+        ds:     𝛿*, displacement thickness
+        tt:     θ, momentum loss thickness
+        Ue:     outer layer velocity component (parallel to the wall)
+        Ue      测试结果显示，直接取最大Ue较为合理，取一定范围内平均，或取固定网格的值，效果不好
+        ```
         '''
         iUe = min(sS.shape[0], iUe)
         Ue = VtS[iUe]
@@ -183,26 +195,32 @@ class FeatureSec():
     @staticmethod
     def getHi(X, Y, U, V, T, j0: int, j1: int, nHi: int):
         '''
-        Calculate shape factor Hi & Hc from field data \n
-            Field data: ndarray (nj,nk), X, Y, U, V, T
-            j0:     j index of the lower surface TE
-            j1:     j index of the upper surface TE
-            nHi:    maximum number of mesh points in k direction for boundary layer
+        Calculate shape factor Hi & Hc from field data
 
-        Return: \n
-            Hi, Hc: ndarray (j1-j0)
-            info:   tuple of ndarray (Tw, dudy)
+        Inputs:
+        ---
+        Field data: ndarray (nj,nk), X, Y, U, V, T \n
+        j0:     j index of the lower surface TE \n
+        j1:     j index of the upper surface TE \n
+        nHi:    maximum number of mesh points in k direction for boundary layer \n
 
-        Note: \n
-            Tw:     wall temperature
-            dudy:   du/dy
-            iUe:    index of mesh point locating the outer velocity Ue
-            XR:     reference position on the wall
+        Return:
+        ---
+        Hi, Hc: ndarray (j1-j0) \n
+        info:   tuple of ndarray (Tw, dudy) \n
 
-        Filed data (j,k) index \n
-            j: 1  - nj  from far field of lower surface TE to far field of upper surface TE
-            j: j0 - j1  from lower surface TE to upper surface TE
-            k: 1  - nk  from surface to far field (assuming pertenticular to the wall)
+        Note:
+        ---
+        Tw:     wall temperature \n
+        dudy:   du/dy \n
+        iUe:    index of mesh point locating the outer velocity Ue \n
+        XR:     reference position on the wall \n
+
+        Filed data (j,k) index
+        ---
+        j: 1  - nj  from far field of lower surface TE to far field of upper surface TE \n
+        j: j0 - j1  from lower surface TE to upper surface TE \n
+        k: 1  - nk  from surface to far field (assuming pertenticular to the wall) \n
         '''
 
         iLE = int(0.5*(j0+j1))
@@ -340,7 +358,7 @@ class FeatureSec():
         '''
         Locate the index and position of basic flow features.
 
-        Basic: L, T, Q, M
+        ### Get value of: L, T, Q, M
         '''
         X = self.x
         M = self.Mw
@@ -408,7 +426,7 @@ class FeatureSec():
         '''
         Locate the index and position of flow features about du/dy.
 
-        Basic: S, R, mUy
+        ### Get value of: S, R, mUy
         '''
         X = self.x
         dudy = self.dudy
@@ -443,9 +461,8 @@ class FeatureSec():
     def locate_geo(self):
         '''
         Locate the index and position of geometry related flow features.\n
-            AoA:    deg
 
-        Geo: Cu, Cl, tu, tl, tm
+        ### Get value of: Cu, Cl, tu, tl, tm
         '''
         X  = self.x
         xx = self.xx
@@ -506,10 +523,13 @@ class FeatureSec():
 
     def locate_shock(self, dMwcri_1=-1.0):
         '''
-        Locate the index and position of shock wave related flow features. \n
-            dMwcri_1: critical value locating shock wave front
+        Locate the index and position of shock wave related flow features.
 
-        Shock: 1, 3, F, U
+        ### Get value of: 1, 3, F, U, D, A
+        
+        Inputs:
+        ---
+        dMwcri_1: critical value locating shock wave front \n
         '''
         X   = self.x
         xx  = self.xx
@@ -615,7 +635,7 @@ class FeatureSec():
         
         i-1: index of shock wave front position in self.xx
 
-        Shock: N, Hi, Hc
+        ### Get value of: N, Hi, Hc
         '''
         X   = self.x
         xx  = self.xx
@@ -659,13 +679,17 @@ class FeatureSec():
     @staticmethod
     def check_singleshock(xu, Mw, dMw, dMwcri_F=-2.0):
         '''
-        Check whether is single shock wave or not \n
-            xx:     ndarray, x location
-            Mw:     ndarray, wall Mach number
-            dMw:    ndarray, slope of wall Mach number
-            dMwcri_F: critical value filtering shock wave
+        Check whether is single shock wave or not
 
-        Return: flag\n
+        Inputs:
+        ---
+        xx:     ndarray, x location \n
+        Mw:     ndarray, wall Mach number \n
+        dMw:    ndarray, slope of wall Mach number \n
+        dMwcri_F: critical value filtering shock wave \n
+
+        Return: flag
+        ---
             1:  single shock wave
             0:  shockless
             -1: multiple shock waves 
@@ -701,7 +725,7 @@ class FeatureSec():
         '''
         Calculate auxiliary features based on basic, geo, and shock features.
 
-        Length, lSW, DCp, Err, CLU, kaf
+        ### Get value of: Length, lSW, DCp, Err, DMp, CLU, kaf
         '''
         X  = self.x
         xx = self.xx
@@ -716,20 +740,34 @@ class FeatureSec():
 
         rr = np.cos(self.AoA/180.0*np.pi)
         #* Err => Cp integral of suction plateau fluctuation
-        # If can not find suction peak, err = 0
+        #* DMp => Mw dent on suction plateau
+        # If can not find suction peak, err = 0, DMp = 0.0
         Err = 0.0
+        DMp = 0.0
         iL  = self.xf_dict['L'][1]
         if iL!=0:
             i1 = self.xf_dict['1'][1]
             xL  = self.xf_dict['L'][2]
-            X0 = np.array([xL, self.getValue('L','Cp')])
-            X1 = np.array([x1, self.getValue('1','Cp')])
+
+            Cp0 = np.array([xL, self.getValue('L','Cp')])
+            Cp1 = np.array([x1, self.getValue('1','Cp')])
+
+            Mw0 = np.array([xL, self.getValue('L','Mw')])
+            Mw1 = np.array([x1, self.getValue('1','Mw')])
+            lL1 = x1-xL
+
             for i in np.arange(iL, i1, 1):
-                XX = np.array([X[i], self.Cp[i]])
-                s, _ = ratio_vec(X0, X1, XX)
+
+                vec = np.array([X[i], self.Cp[i]])
+                s, _ = ratio_vec(Cp0, Cp1, vec)
                 Err += s*(X[i+1]-X[i])
 
+                tt = (X[i]-xL)/lL1
+                ss = (1-tt)*Mw0 + tt*Mw1
+                DMp = max(DMp, ss-self.Mw[i])
+
         self.xf_dict['Err'][1] = abs(Err)*rr
+        self.xf_dict['DMp'][1] = DMp
 
         #* CLU => CL of upper surface
         CLU = 0.0
@@ -763,12 +801,16 @@ class FeatureSec():
     #TODO: output features
     def output_features(self, fname="feature2d.txt", append=True, keys_=None):
         '''
-        Output all features to file. \n
-            keys:  list of key strings for output. None means default.
+        Output all features to file.
 
-        Output order: \n
-            feature:    keys of feature dictionary
-            key:        value or ('X', 'Cp', 'Mw', 'Tw', 'Hi', 'Hc', 'dudy')
+        Inputs:
+        ---
+        keys:  list of key strings for output. None means default.
+
+        Output order:
+        ---
+        feature:    keys of feature dictionary \n
+        key:        value or ('X', 'Cp', 'Mw', 'Tw', 'Hi', 'Hc', 'dudy') \n
         '''
         if keys_ is not None:
             keys = copy.deepcopy(keys_)
@@ -807,8 +849,9 @@ class FeatureXfoil(FeatureSec):
 
     def setdata(self, x, y, Cp):
         '''
-        Set the data of this foil or section.   \n
-            x,y,Cp: list, start from upper surface trailing edge (order from xfoil)
+        Set the data of this foil or section.
+
+        x,y,Cp: list, start from upper surface trailing edge (order from xfoil)
         '''
         x_  = list(reversed(x))
         y_  = list(reversed(y))
@@ -889,9 +932,14 @@ class FeatureTSFoil(FeatureSec):
 
     def setdata(self, xu, yu, xl, yl, cpu, cpl, mwu, mwl):
         '''
-        Set the data of this foil or section.   \n
-            xu, yu, xl, yl, cpu, cpl:   ndarray from pyTSFoil
-            mwu, mwl:   ndarray from pyTSFoil (do not need built-in Cp2Mw)
+        Set the data of this foil or section.
+
+        Note:
+        ---
+        ```text
+        xu, yu, xl, yl, cpu, cpl:   ndarray from pyTSFoil
+        mwu, mwl:   ndarray from pyTSFoil (do not need built-in Cp2Mw)
+        ```
         '''
         cp1u = cpu[-1] + (1-xu[-2])/(xu[-1]-xu[-2])*(cpu[-1]-cpu[-2])
         cp1l = cpl[-1] + (1-xl[-2])/(xl[-1]-xl[-2])*(cpl[-1]-cpl[-2])
@@ -976,13 +1024,17 @@ class FeatureTSFoil(FeatureSec):
 
 def ratio_vec(x0, x1, x):
     '''
-    Calculate distance s to vector x1-x0.   \n
-        x0, x1: ndarray, start and end point of the vector
-        x:      ndarray, current point
+    Calculate distance s to vector x1-x0.
 
-    Return: \n
-        s:  distance to line
-        t:  ratio of (projected |x0x|) / |x0x1|
+    Inputs:
+    ---
+    x0, x1: ndarray, start and end point of the vector \n
+    x:      ndarray, current point \n
+
+    Return:
+    ---
+    s:  distance to line \n
+    t:  ratio of (projected |x0x|) / |x0x1| \n
     '''
     l0 = np.linalg.norm(x0-x1) + 1e-20
     l1 = np.linalg.norm(x0-x ) + 1e-20
@@ -996,9 +1048,14 @@ def ratio_vec(x0, x1, x):
 def curve_curvature(x, y):
     '''
     Calculate curvature of points in the curve
-        x, y: points of curve (list or ndarray)
 
-    Return: curv ndarray
+    Inputs:
+    ---
+    x, y: points of curve (list or ndarray)
+
+    Return:
+    ---
+    curv: ndarray
     '''
     nn = len(x)
     if nn<3:

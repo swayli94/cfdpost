@@ -18,12 +18,16 @@ class cfl3d():
     @staticmethod
     def readCoef(path: str, n=10):
         '''
-        Read clcd_wall.dat or clcd.dat of the CFL3D outputs. \n
-            path:   folder that contains the results
-            n:      get the mean value of final n steps
+        Read clcd_wall.dat or clcd.dat of the CFL3D outputs.
 
-        Return: \n
-            converge (bool), CL, CD, Cm(z), CDp, CDf
+        Inputs:
+        ---
+        path:   folder that contains the results \n
+        n:      get the mean value of final n steps \n
+
+        Return:
+        ---
+        converge (bool), CL, CD, Cm(z), CDp, CDf
         '''
         converge = True
         CL = 0.0
@@ -91,12 +95,16 @@ class cfl3d():
     @staticmethod
     def readAoA(path: str, n=10):
         '''
-        Read cfl3d.alpha of the CFL3D outputs. \n
-            path:   folder that contains the results
-            n:      get the mean value of final n steps
+        Read cfl3d.alpha of the CFL3D outputs.
 
-        Return: \n
-            succeed (bool), AoA
+        Inputs:
+        ---
+        path:   folder that contains the results \n
+        n:      get the mean value of final n steps \n
+
+        Return:
+        ---
+        succeed (bool), AoA
         '''
         succeed = True
         AoA = 0.0
@@ -128,11 +136,15 @@ class cfl3d():
     @staticmethod
     def readinput(path: str):
         '''
-        Read cfl3d.inp of the CFL3D input. \n
-            path:   folder that contains the input files
+        Read cfl3d.inp of the CFL3D input.
 
-        Return: \n
-            succeed (bool), Minf, AoA0 (deg), Re (e6, /m), l2D(bool)
+        Inputs:
+        ---
+        path:   folder that contains the input files
+
+        Return:
+        ---
+        succeed (bool), Minf, AoA0 (deg), Re (e6, /m), l2D(bool)
         '''
 
         succeed = True
@@ -171,11 +183,15 @@ class cfl3d():
     @staticmethod
     def readprt(path: str, fname='cfl3d.prt'):
         '''
-        Read cfl3d.prt of the CFL3D output. \n
-            path:   folder that contains the output files.
+        Read cfl3d.prt of the CFL3D output.
 
-        Return: \n
-            succeed (bool)
+        Inputs:
+        ---
+        path:   folder that contains the output files.
+
+        Return:
+        ---
+        succeed (bool)
         '''
         mi = 10000000   # maximum size of i*j*k
         ijk = np.zeros([mi,3],  dtype=int)
@@ -328,18 +344,25 @@ class cfl3d():
     @staticmethod
     def readprt_foil(path: str, j0: int, j1: int, fname='cfl3d.prt'):
         '''
-        Read and extract foil Cp from cfl3d.prt \n
-            path:   folder that contains the output files.
-            j0:     j index of the lower surface TE
-            j1:     j index of the upper surface TE
+        Read and extract foil Cp from cfl3d.prt
 
-        cfl3d.prt index \n
-            i : 1 - 1   symmetry plane
-            j : 1 - nj  from far field of lower surface TE to far field of upper surface TE
-            k : 1 - nk  from surface to far field
+        Inputs:
+        ---
+        path:   folder that contains the output files. \n
+        j0:     j index of the lower surface TE \n
+        j1:     j index of the upper surface TE \n
 
-        Return: \n
-            succeed (bool), (field: X,Y,U,V,P,T,Ma,Cp,vi), (foil: x, y, Cp)
+        cfl3d.prt index
+        ---
+        ```text
+        i : 1 - 1   symmetry plane
+        j : 1 - nj  from far field of lower surface TE to far field of upper surface TE
+        k : 1 - nk  from surface to far field
+        ```
+
+        Return:
+        ---
+        succeed (bool), (field: X,Y,U,V,P,T,Ma,Cp,vi), (foil: x, y, Cp)
         '''
 
         if platform.system() in 'Windows':
