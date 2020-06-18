@@ -752,8 +752,8 @@ class FeatureSec():
             Cp0 = np.array([xL, self.getValue('L','Cp')])
             Cp1 = np.array([x1, self.getValue('1','Cp')])
 
-            Mw0 = np.array([xL, self.getValue('L','Mw')])
-            Mw1 = np.array([x1, self.getValue('1','Mw')])
+            Mw0 = self.getValue('L','Mw')
+            Mw1 = self.getValue('1','Mw')
             lL1 = x1-xL
 
             for i in np.arange(iL, i1, 1):
