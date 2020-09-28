@@ -1,5 +1,5 @@
 '''
-This module contains a class to extract flow features of airfoils or wing sections.
+Extract physical features of airfoils or wing sections.
 '''
 import copy
 import os
@@ -8,7 +8,7 @@ import numpy as np
 from scipy.interpolate import interp1d
 
 
-class FeatureSec():
+class PhysicalSec():
     '''
     Extracting flow features of a section (features on/near the wall)
     '''
@@ -58,14 +58,17 @@ class FeatureSec():
 
     def __init__(self, Minf, AoA, Re):
         '''
+        ### Inputs:
+        ```text
         Minf:       Free stream Mach number
         AoA:        Angle of attack (deg)
         Re:         Reynolds number per meter
+        ```
         '''
         self.Minf = Minf
         self.AoA  = AoA
         self.Re   = Re
-        self.xf_dict = copy.deepcopy(FeatureSec.xf_dict)
+        self.xf_dict = copy.deepcopy(PhysicalSec.xf_dict)
 
     def setdata(self, x, y, Cp, Tw, Hi, Hc, dudy):
         '''
@@ -113,13 +116,14 @@ class FeatureSec():
     @staticmethod
     def IsentropicCp(Ma, Minf: float, g=1.4):
         ''' 
-        Isentropic flow: Calculate Cp by Mach \n
+        Isentropic flow: Calculate Cp by Mach
 
-        Inputs:
-        ---
-        Ma:     float, or ndarray \n
-        Minf:   free stream Mach number \n
-        g:      γ=1.4, ratio of the specific heats \n
+        ### Inputs:
+        ```text
+        Ma:     float, or ndarray
+        Minf:   free stream Mach number
+        g:      γ=1.4, ratio of the specific heats
+        ```
         '''
         X = (2.0+(g-1.0)*Minf**2)/(2.0+(g-1.0)*Ma**2)
         X = X**(g/(g-1.0))
@@ -145,20 +149,21 @@ class FeatureSec():
         '''
         Calculate shape factor Hi & Hc by mesh points on a line pertenticular to the wall.
 
-        Inputs:
-        ---
-        sS:     ndarray (n), distance of mesh points to wall \n
-        VtS:    ndarray (n), velocity component of mesh points (parallel to the wall) \n
-        Tw:     wall temperature (K) \n
-        iUe:    index of mesh point locating the outer velocity Ue \n
+        ### Inputs:
+        ```text
+        sS:     ndarray (n), distance of mesh points to wall
+        VtS:    ndarray (n), velocity component of mesh points (parallel to the wall)
+        Tw:     wall temperature (K)
+        iUe:    index of mesh point locating the outer velocity Ue
+        ```
 
-        Return:
-        ---
-        Hi:     incompressible shape factor \n
-        Hc:     compressible shape factor \n
+        ### Return:
+        ```text
+        Hi:     incompressible shape factor
+        Hc:     compressible shape factor
+        ```
 
-        Note:
-        ---
+        ### Note:
         ```text
         XR  => 物面参考点，考察以 XR 为起点，物面法向 nR 方向上的数据点，共 nHi 个数据点
         sS  => 数据点到物面距离
@@ -197,30 +202,34 @@ class FeatureSec():
         '''
         Calculate shape factor Hi & Hc from field data
 
-        Inputs:
-        ---
-        Field data: ndarray (nj,nk), X, Y, U, V, T \n
-        j0:     j index of the lower surface TE \n
-        j1:     j index of the upper surface TE \n
-        nHi:    maximum number of mesh points in k direction for boundary layer \n
+        ### Inputs:
+        ```text
+        Field data: ndarray (nj,nk), X, Y, U, V, T
+        j0:     j index of the lower surface TE
+        j1:     j index of the upper surface TE
+        nHi:    maximum number of mesh points in k direction for boundary layer
+        ```
 
-        Return:
-        ---
-        Hi, Hc: ndarray (j1-j0) \n
-        info:   tuple of ndarray (Tw, dudy) \n
+        ### Return:
+        ```text
+        Hi, Hc: ndarray (j1-j0)
+        info:   tuple of ndarray (Tw, dudy)
+        ```
 
-        Note:
-        ---
-        Tw:     wall temperature \n
-        dudy:   du/dy \n
-        iUe:    index of mesh point locating the outer velocity Ue \n
-        XR:     reference position on the wall \n
+        ### Note:
+        ```text
+        Tw:     wall temperature
+        dudy:   du/dy
+        iUe:    index of mesh point locating the outer velocity Ue
+        XR:     reference position on the wall
+        ```
 
-        Filed data (j,k) index
-        ---
-        j: 1  - nj  from far field of lower surface TE to far field of upper surface TE \n
-        j: j0 - j1  from lower surface TE to upper surface TE \n
-        k: 1  - nk  from surface to far field (assuming pertenticular to the wall) \n
+        ### Filed data (j,k) index
+        ```text
+        j: 1  - nj  from far field of lower surface TE to far field of upper surface TE
+        j: j0 - j1  from lower surface TE to upper surface TE
+        k: 1  - nk  from surface to far field (assuming pertenticular to the wall)
+        ```
         '''
 
         iLE = int(0.5*(j0+j1))
@@ -269,7 +278,7 @@ class FeatureSec():
 
         #* Calculate Hi & Hc
         for j in range(nn):
-            Hi[j], Hc[j] = FeatureSec.ShapeFactor(sS[j,:], VtS[j,:], Tw[j], iUe[j])
+            Hi[j], Hc[j] = PhysicalSec.ShapeFactor(sS[j,:], VtS[j,:], Tw[j], iUe[j])
 
         #* Limit leading edge Hi
         r1 = 1.0
@@ -296,14 +305,18 @@ class FeatureSec():
 
         return Hi, Hc, (Tw, dudy)
 
-    def getValue(self, feature: str, key='key'):
+    def getValue(self, feature: str, key='key') -> float:
         '''
-        Get value of given feature. \n
-            feature:    key of feature dictionary
-            key:        'i', 'X', 'Cp', 'Mw', 'Tw', 'Hi', 'Hc', 'dudy'
+        Get value of given feature.
+
+        ### Inputs:
+        ```text
+        feature:    key of feature dictionary
+        key:        'i', 'X', 'Cp', 'Mw', 'Tw', 'Hi', 'Hc', 'dudy'
+        ```
         '''
 
-        if not feature in FeatureSec.xf_dict.keys():
+        if not feature in PhysicalSec.xf_dict.keys():
             print('  Warning: feature [%s] not valid'%(feature))
             return 0.0
 
@@ -351,7 +364,7 @@ class FeatureSec():
 
         f = interp1d(X, Y, kind='cubic')
 
-        return f(xx)
+        return f(xx) 
 
     #TODO: locate the position of flow features
     def locate_basic(self):
@@ -527,9 +540,10 @@ class FeatureSec():
 
         ### Get value of: 1, 3, F, U, D, A
         
-        Inputs:
-        ---
-        dMwcri_1: critical value locating shock wave front \n
+        ### Inputs:
+        ```text
+        dMwcri_1: critical value locating shock wave front
+        ```
         '''
         X   = self.x
         xx  = self.xx
@@ -544,7 +558,7 @@ class FeatureSec():
             dMw[i] = (mu[i+1]-mu[i])/(xx[i+1]-xx[i])
             dMw[i] = min(dMw[i], 2)
 
-        flag = FeatureSec.check_singleshock(xx, mu, dMw)
+        flag = PhysicalSec.check_singleshock(xx, mu, dMw)
         self.xf_dict['lSW'][1] = flag
         if not flag==1:
             return 0
@@ -681,18 +695,20 @@ class FeatureSec():
         '''
         Check whether is single shock wave or not
 
-        Inputs:
-        ---
-        xx:     ndarray, x location \n
-        Mw:     ndarray, wall Mach number \n
-        dMw:    ndarray, slope of wall Mach number \n
-        dMwcri_F: critical value filtering shock wave \n
+        ### Inputs:
+        ```text
+        xx:     ndarray, x location
+        Mw:     ndarray, wall Mach number
+        dMw:    ndarray, slope of wall Mach number
+        dMwcri_F: critical value filtering shock wave
+        ```
 
-        Return: flag
-        ---
-            1:  single shock wave
-            0:  shockless
-            -1: multiple shock waves 
+        ### Return: flag
+        ```text
+        1:  single shock wave
+        0:  shockless
+        -1: multiple shock waves 
+        ```
         '''
         nn = xu.shape[0]
         dm = dMw.copy()
@@ -803,14 +819,16 @@ class FeatureSec():
         '''
         Output all features to file.
 
-        Inputs:
-        ---
+        ### Inputs:
+        ```text
         keys:  list of key strings for output. None means default.
+        ```
 
-        Output order:
-        ---
-        feature:    keys of feature dictionary \n
-        key:        value or ('X', 'Cp', 'Mw', 'Tw', 'Hi', 'Hc', 'dudy') \n
+        ### Output order:
+        ```text
+        feature:    keys of feature dictionary
+        key:        value or ('X', 'Cp', 'Mw', 'Tw', 'Hi', 'Hc', 'dudy')
+        ```
         '''
         if keys_ is not None:
             keys = copy.deepcopy(keys_)
@@ -840,7 +858,7 @@ class FeatureSec():
         f.close()
 
 
-class FeatureXfoil(FeatureSec):
+class PhysicalXfoil(PhysicalSec):
     '''
     Extract features from Xfoil (low speed) results.
     '''
@@ -893,9 +911,11 @@ class FeatureXfoil(FeatureSec):
         '''
         Output all features to file.
 
-        Output order: \n
-            feature:    keys of feature dictionary
-            key:        'X', 'Mw', 'Cp'
+        ### Output order:
+        ```text
+        feature:    keys of feature dictionary
+        key:        'X', 'Mw', 'Cp'
+        ```
         '''
         keys = ['X','Mw','Cp']
         features = ['L', 'T', 'Q', 'M', 'Cu', 'Cl', 'tu', 'tl', 'tm']
@@ -923,7 +943,7 @@ class FeatureXfoil(FeatureSec):
         f.close()
 
 
-class FeatureTSFoil(FeatureSec):
+class PhysicalTSFoil(PhysicalSec):
     '''
     Extract features from pyTSFoil (transonic speed) results.
     '''
@@ -934,8 +954,7 @@ class FeatureTSFoil(FeatureSec):
         '''
         Set the data of this foil or section.
 
-        Note:
-        ---
+        ### Note:
         ```text
         xu, yu, xl, yl, cpu, cpl:   ndarray from pyTSFoil
         mwu, mwl:   ndarray from pyTSFoil (do not need built-in Cp2Mw)
@@ -985,9 +1004,11 @@ class FeatureTSFoil(FeatureSec):
         '''
         Output all features to file.
 
-        Output order: \n
-            feature:    keys of feature dictionary
-            key:        'X', 'Mw', 'Cp'
+        ### Output order:
+        ```text
+        feature:    keys of feature dictionary
+        key:        'X', 'Mw', 'Cp'
+        ```
         '''
 
         keys = ['X','Mw','Cp']
@@ -1018,23 +1039,25 @@ class FeatureTSFoil(FeatureSec):
         f.close()
 
 
-#TODO: ========================================
-#TODO: Supportive functions
-#TODO: ========================================
+#* ========================================
+#* Supportive functions
+#* ========================================
 
 def ratio_vec(x0, x1, x):
     '''
     Calculate distance s to vector x1-x0.
 
-    Inputs:
-    ---
-    x0, x1: ndarray, start and end point of the vector \n
-    x:      ndarray, current point \n
+    ### Inputs:
+    ```text
+    x0, x1: ndarray, start and end point of the vector
+    x:      ndarray, current point
+    ```
 
-    Return:
-    ---
-    s:  distance to line \n
-    t:  ratio of (projected |x0x|) / |x0x1| \n
+    ### Return:
+    ```text
+    s:  distance to line
+    t:  ratio of (projected |x0x|) / |x0x1|
+    ```
     '''
     l0 = np.linalg.norm(x0-x1) + 1e-20
     l1 = np.linalg.norm(x0-x ) + 1e-20
@@ -1049,13 +1072,15 @@ def curve_curvature(x, y):
     '''
     Calculate curvature of points in the curve
 
-    Inputs:
-    ---
+    ### Inputs:
+    ```text
     x, y: points of curve (list or ndarray)
+    ```
 
-    Return:
-    ---
+    ### Return:
+    ```text
     curv: ndarray
+    ```
     '''
     nn = len(x)
     if nn<3:

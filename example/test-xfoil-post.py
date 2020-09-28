@@ -1,6 +1,6 @@
 
 import time
-
+import numpy as np
 from cfdpost.post import feature_xfoil
 
 
@@ -15,7 +15,7 @@ if __name__ == "__main__":
     Minf = 0.2
     AoA  = [5.0, 6.0]
     Re   = [5e5, 5e5]
-    feature_xfoil(cst_u, cst_l, t, Minf, Re, AoA, n_crit=0.1, fname='feature-xfoil.txt')
+    feature_xfoil(np.array(cst_u), np.array(cst_l), t, Minf, Re, AoA, n_crit=0.1, fname='feature-xfoil.txt')
 
     t1 = time.perf_counter()
     print('Time = %.3f s'%(t1-t0))

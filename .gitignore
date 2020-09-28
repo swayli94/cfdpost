@@ -1,7 +1,8 @@
-cfdpost/__pycache__/
-cfdpost.egg-info/
+*__pycache__/
+*.egg-info/
 dist/
 build/
+.vscode/
 
 Calculation/
 *.txt

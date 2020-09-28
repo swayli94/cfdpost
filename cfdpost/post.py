@@ -1,8 +1,8 @@
 
 import numpy as np
 
-from cfdpost.cfdresult import cfl3d
-from cfdpost.feature2d import FeatureSec, FeatureXfoil, FeatureTSFoil
+from .cfdresult import cfl3d
+from .section.physical import PhysicalSec, PhysicalXfoil, PhysicalTSFoil
 
 import matplotlib.pyplot as plt
 
@@ -51,10 +51,10 @@ def post_foil_cfl3d(path, j0, j1, nHi=40, fname='feature2d.txt', tecplot=False):
     (x, y, Cp1) = foil
     (X,Y,U,V,P,T,Ma,Cp,vi) = field
 
-    Hi, Hc, info = FeatureSec.getHi(X,Y,U,V,T,j0=j0,j1=j1,nHi=nHi)
+    Hi, Hc, info = PhysicalSec.getHi(X,Y,U,V,T,j0=j0,j1=j1,nHi=nHi)
     (Tw, dudy) = info
 
-    fF = FeatureSec(Minf, AoA, Re*1e6)
+    fF = PhysicalSec(Minf, AoA, Re*1e6)
     fF.setdata(x, y, Cp1, Tw, Hi, Hc, dudy)
     fF.extract_features()
 
@@ -66,7 +66,8 @@ def post_foil_cfl3d(path, j0, j1, nHi=40, fname='feature2d.txt', tecplot=False):
 
     return fF
 
-def feature_xfoil(cst_u: list, cst_l: list, t, Minf: float, Re, AoA, n_crit=0.1, fname='feature-xfoil.txt'):
+
+def feature_xfoil(cst_u, cst_l, t, Minf: float, Re, AoA, n_crit=0.1, fname='feature-xfoil.txt'):
     '''
     Evaluate by xfoil and extract features.
 
@@ -124,7 +125,7 @@ def feature_xfoil(cst_u: list, cst_l: list, t, Minf: float, Re, AoA, n_crit=0.1,
         print(xf.Re, AoA[i], cl)
 
         #* Extract features
-        fF = FeatureXfoil(Minf, AoA[i], Re[i])
+        fF = PhysicalXfoil(Minf, AoA[i], Re[i])
         fF.setdata(x,y,cp)
         fF.extract_features()
 
@@ -148,9 +149,8 @@ def feature_xfoil(cst_u: list, cst_l: list, t, Minf: float, Re, AoA, n_crit=0.1,
 
         fF.output_features(fname=fname, append=True)
 
-    return fF
 
-def feature_TSFoil(cst_u: list, cst_l: list, t, Minf, Re, AoA, fname='feature-xfoil.txt'):
+def feature_TSFoil(cst_u, cst_l, t, Minf, Re, AoA, fname='feature-xfoil.txt'):
     '''
     Evaluate by TSFOIL2 and extract features.
 
@@ -185,7 +185,7 @@ def feature_TSFoil(cst_u: list, cst_l: list, t, Minf, Re, AoA, fname='feature-xf
         print(Minf[i], AoA[i], Re[i], ts.CL)
 
         #* Extract features
-        fF = FeatureTSFoil(Minf[i], AoA[i], Re[i])
+        fF = PhysicalTSFoil(Minf[i], AoA[i], Re[i])
         fF.setdata(ts.xu, ts.yu, ts.xl, ts.yl, ts.cpu, ts.cpl, ts.mwu, ts.mwl)
         fF.extract_features()
 
@@ -209,15 +209,5 @@ def feature_TSFoil(cst_u: list, cst_l: list, t, Minf, Re, AoA, fname='feature-xf
         f.close()
 
         fF.output_features(fname=fname, append=True)
-
-    return fF
-
-
-
-
-
-
-
-
 
 

@@ -1,6 +1,7 @@
 
 import time
 
+import numpy as np
 from cfdpost.post import feature_TSFoil
 
 
@@ -15,7 +16,7 @@ if __name__ == "__main__":
     Minf = 0.76
     AoA  = 0.6
     Re   = 5e5
-    feature_TSFoil(cst_u, cst_l, t, Minf, Re, AoA, fname='feature-tsfoil.txt')
+    feature_TSFoil(np.array(cst_u), np.array(cst_l), t, Minf, Re, AoA, fname='feature-tsfoil.txt')
 
     t1 = time.perf_counter()
     print('Time = %.3f s'%(t1-t0))
