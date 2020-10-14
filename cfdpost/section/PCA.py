@@ -128,8 +128,8 @@ class PCASec():
         '''
         if not isinstance(data_, np.ndarray):
             raise Exception('Must provide ndarray')
-        elif data_.shape[1] != self.n_point:
-            raise Exception('Must provide ndarray, shape [n, n_point]')
+        elif data_.shape[1] != self.n_feature:
+            raise Exception('Must provide ndarray, shape [n, n_feature]')
 
         data_ = self.model.inverse_transform(data_)
         data_ = data_*(self._upp-self._low) + self._low
