@@ -12,6 +12,8 @@ class PCASec():
     '''
     Extract features of airfoil wall Mach number distribution
 
+    >>> pca = PCASec(n_point: int, n_feature=None, whiten=False, svd_solver='auto')
+
     PCA: principal component analysis
 
     https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html
@@ -19,7 +21,7 @@ class PCASec():
     ### Input:
     ```text
         n_point:        data size of an airfoil
-        n_feature:      intensional size of features
+        n_feature:      intensional size of features (or None)
         whiten:         whitening of the PCA
         svd_solver:     'auto', 'full', 'arpack', 'randomized'
     ```
@@ -34,7 +36,7 @@ class PCASec():
 
     '''
 
-    def __init__(self, n_point: int, n_feature: int, whiten=False, svd_solver='auto'):
+    def __init__(self, n_point: int, n_feature=None, whiten=False, svd_solver='auto'):
 
         self.n_point = n_point
         self.n_feature = n_feature
