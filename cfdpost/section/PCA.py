@@ -21,7 +21,7 @@ class PCASec():
     ### Input:
     ```text
         n_point:        data size of an airfoil
-        n_feature:      intensional size of features (or None)
+        n_feature:      intensional size of features (or None, or 'mle')
         whiten:         whitening of the PCA
         svd_solver:     'auto', 'full', 'arpack', 'randomized'
     ```
@@ -65,6 +65,9 @@ class PCASec():
         self.x_train = (self.x_train-self._low)/(self._upp-self._low)
 
         self.model.fit(self.x_train)
+
+        if not isinstance(self.n_feature, int):
+            self.n_feature = self.model.n_components_
     
     def save_params(self, fname='MwSec_PCA.pth'):
         '''
@@ -136,6 +139,41 @@ class PCASec():
     
         return data_
 
+    @property
+    def explained_variance(self):
+        '''
+        The amount of variance explained by each of the selected components.
+
+        Equal to n_feature largest eigenvalues of the covariance matrix of X.
+
+        ### Return:
+        ```text
+        variance:   ndarray [n_feature]
+        ```
+        '''
+        return self.model.explained_variance_
+
+    @property
+    def explained_variance_ratio(self):
+        '''
+        Percentage of variance explained by each of the selected components.
+
+        If n_feature is not set then all components are stored and the sum of the ratios is equal to 1.0.
+
+        ### Return:
+        ```text
+        variance:   ndarray [n_feature]
+        ```
+        '''
+        return self.model.explained_variance_ratio_
+
+    @property
+    def total_component_energy(self) -> float:
+        '''
+        The total energy represented by the n_feature PCA components
+        ''' 
+        return np.sum(self.model.explained_variance_ratio_)
+
 
 class KPCASec(PCASec):
     '''
@@ -148,7 +186,7 @@ class KPCASec(PCASec):
     ### Input:
     ```text
         n_point:        data size of an airfoil
-        n_feature:      intensional size of features
+        n_feature:      intensional size of features (or None)
         kernel:         'linear', 'poly', 'rbf', 'sigmoid', 'cosine', 'precomputed'
         eigen_solver:   'auto', 'dense', 'arpack'   
         n_jobs:         number of parallel jobs to run (-1 means using all processors)
@@ -164,10 +202,12 @@ class KPCASec(PCASec):
 
     '''
 
-    def __init__(self, n_point: int, n_feature: int, kernel='linear', eigen_solver='auto', n_jobs=1):
+    def __init__(self, n_point: int, n_feature=None, kernel='linear', eigen_solver='auto', n_jobs=1):
         super().__init__(n_point, n_feature)
 
         self.model = KernelPCA(n_components=n_feature, kernel=kernel, eigen_solver=eigen_solver, copy_X=True, n_jobs=n_jobs)
+
+        self.model.fit_inverse_transform = True
     
     def save_params(self, fname='MwSec_KPCA.pth'):
         '''
@@ -181,3 +221,31 @@ class KPCASec(PCASec):
         '''
         super().load_params(fname=fname)
 
+    @property
+    def explained_variance(self):
+        '''
+        The amount of variance explained by each of the selected components.
+
+        Equal to n_feature largest eigenvalues of the covariance matrix of X.
+
+        ### Return:
+        ```text
+        variance:   ndarray [n_feature]
+        ```
+        '''
+        return self.model.lambdas_
+
+    @property
+    def explained_variance_ratio(self):
+        '''
+        Not defined
+        ```
+        '''
+        return self.model.lambdas_
+
+    @property
+    def total_component_energy(self) -> float:
+        '''
+        Not defined
+        ''' 
+        return 1.0
