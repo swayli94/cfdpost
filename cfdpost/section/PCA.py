@@ -5,6 +5,7 @@ https://scikit-learn.org/stable/modules/classes.html#module-sklearn.decompositio
 
 '''
 import pickle
+import copy
 
 import numpy as np
 from sklearn.decomposition import PCA, KernelPCA
