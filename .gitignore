@@ -6,5 +6,6 @@ build/
 
 Calculation/
 *.txt
+*.ini
 
 example/test/

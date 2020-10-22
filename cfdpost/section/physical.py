@@ -106,6 +106,22 @@ class PhysicalSec():
         
         self.iLE = iLE
 
+    def set_Mw(self, x, Mw):
+        '''
+        Set the Mw distribution of this foil or section.
+
+        Data:   ndarray, start from lower surface trailing edge
+        '''
+        self.x  = copy.deepcopy(x)
+        self.Mw = copy.deepcopy(Mw)
+
+        iLE = np.argmin(self.x)
+        self.iLE = iLE
+
+        fmw = interp1d(self.x[iLE:], self.Mw[iLE:], kind='cubic')
+        self.xx = np.arange(0.0, 1.0, 0.001)
+        self.mu = fmw(self.xx)
+
     @property
     def n_point(self):
         '''
