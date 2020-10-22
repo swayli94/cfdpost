@@ -4,6 +4,8 @@ Extract flow features of airfoils or wing sections.
 https://scikit-learn.org/stable/modules/classes.html#module-sklearn.decomposition
 
 '''
+import pickle
+
 import numpy as np
 from sklearn.decomposition import PCA, KernelPCA
 
@@ -69,30 +71,36 @@ class PCASec():
         if not isinstance(self.n_feature, int):
             self.n_feature = self.model.n_components_
     
-    def save_params(self, fname='MwSec_PCA.pth'):
+    def save_rawdata(self, fname='Raw.bin'):
         '''
-        Save the parameters of this estimator
+        Save the raw data of PCA training
         '''
-        params = self.model.get_params(deep=True) #type: dict
+        with open(fname, 'wb') as f:
+            pickle.dump(self.n_sample, f)
+            pickle.dump(self.n_point, f)
+            pickle.dump(self.n_feature, f)
 
-        with open(fname, 'w') as f:
-            for k,v in sorted(params.items()):
-                f.write(str(k)+' '+str(v)+'\n')
+            for i in range(self.n_sample):
+                pickle.dump(self.x_train[i,:], f)
 
-    def load_params(self, fname='MwSec_PCA.pth'):
+    def load_rawdata(self, fname='Raw.bin'):
         '''
-        Load the parameters of this estimator
+        Load the raw data of PCA training
         '''
-        params = {}
+        with open(fname, 'rb') as f:
+            self.n_sample  = pickle.load(f)
+            self.n_point   = pickle.load(f)
+            n_feature = pickle.load(f)
 
-        with open(fname, 'r') as f:
-            for line in f.readlines():
-                line = line.strip()
-                k = line.split(' ')[0]
-                v = line.split(' ')[1]
-                params[k] = v
+            if n_feature != self.n_feature:
+                raise Exception('The size of PCA features does not match')
+            
+            x_data = np.zeros([self.n_sample, self.n_point])
+            for i in range(self.n_sample):
+                x = pickle.load(f)
+                x_data[i,:] = copy.deepcopy(np.array(x))
 
-        self.model.set_params(params)
+            self.train(x_data)
 
     def transform(self, x_data) -> np.ndarray:
         '''
@@ -208,18 +216,6 @@ class KPCASec(PCASec):
         self.model = KernelPCA(n_components=n_feature, kernel=kernel, eigen_solver=eigen_solver, copy_X=True, n_jobs=n_jobs)
 
         self.model.fit_inverse_transform = True
-    
-    def save_params(self, fname='MwSec_KPCA.pth'):
-        '''
-        Save the parameters of this estimator
-        '''
-        super().save_params(fname=fname)
-
-    def load_params(self, fname='MwSec_KPCA.pth'):
-        '''
-        Load the parameters of this estimator
-        '''
-        super().load_params(fname=fname)
 
     @property
     def explained_variance(self):
