@@ -33,7 +33,7 @@ class PCASec():
     ```text
         _low, _upp:     lower and upper bound of the data
         n_sample:       number of training samples
-        x_train:        training samples, ndarray [n_sample, n_point]
+        x_train:        unscaled training samples, ndarray [n_sample, n_point]
         model:          estimator
     ```
 
@@ -65,9 +65,9 @@ class PCASec():
         
         self.n_sample = x_data.shape[0]
         self.x_train = x_data.copy()
-        self.x_train = (self.x_train-self._low)/(self._upp-self._low)
+        xx = (self.x_train-self._low)/(self._upp-self._low)
 
-        self.model.fit(self.x_train)
+        self.model.fit(xx)
 
         if not isinstance(self.n_feature, int):
             self.n_feature = self.model.n_components_
@@ -79,7 +79,6 @@ class PCASec():
         with open(fname, 'wb') as f:
             pickle.dump(self.n_sample, f)
             pickle.dump(self.n_point, f)
-            pickle.dump(self.n_feature, f)
 
             for i in range(self.n_sample):
                 pickle.dump(self.x_train[i,:], f)
@@ -89,13 +88,9 @@ class PCASec():
         Load the raw data of PCA training
         '''
         with open(fname, 'rb') as f:
-            self.n_sample  = pickle.load(f)
-            self.n_point   = pickle.load(f)
-            n_feature = pickle.load(f)
+            self.n_sample = pickle.load(f)
+            self.n_point  = pickle.load(f)
 
-            if n_feature != self.n_feature:
-                raise Exception('The size of PCA features does not match')
-            
             x_data = np.zeros([self.n_sample, self.n_point])
             for i in range(self.n_sample):
                 x = pickle.load(f)
@@ -143,10 +138,25 @@ class PCASec():
         elif data_.shape[1] != self.n_feature:
             raise Exception('Must provide ndarray, shape [n, n_feature]')
 
-        data_ = self.model.inverse_transform(data_)
-        data_ = data_*(self._upp-self._low) + self._low
+        x_data = self.model.inverse_transform(data_)
+        x_data = x_data*(self._upp-self._low) + self._low
     
-        return data_
+        return x_data
+
+    def standard_x_distribution(self):
+        '''
+        Desired X distribution: xx (ndarray [n_point])
+
+        From lower surface trailing edge to upper surface trailing edge
+        '''
+        n = int((self.n_point+1)/2)
+        x0 = np.zeros(n)
+        for i in range(n):
+            x0[i] = clustcos(i, n)
+        x1 = np.flip(x0, axis=0)
+        xx = np.concatenate((x1, x0[1:]), axis=0)
+
+        return xx
 
     @property
     def explained_variance(self):
@@ -205,7 +215,7 @@ class KPCASec(PCASec):
     ```text
         _low, _upp:     lower and upper bound of the data
         n_sample:       number of training samples
-        x_train:        training samples, ndarray [n_sample, n_point]
+        x_train:        unscaled training samples, ndarray [n_sample, n_point]
         model:          estimator
     ```
 
@@ -246,3 +256,30 @@ class KPCASec(PCASec):
         Not defined
         ''' 
         return 1.0
+
+
+#* The same as cst-modeling3d
+#* https://github.com/swayli94/cst-modeling3d
+
+def clustcos(i: int, nn: int, a0=0.0079, a1=0.96, beta=1.0) -> float:
+    '''
+    Point distribution on x-axis [0, 1]. (More points at both ends)
+
+    >>> c = clustcos(i, n, a0, a1, beta)
+
+    ### Inputs:
+    ```text
+    i:      index of current point (start from 0)
+    nn:     total amount of points
+    a0:     parameter for distributing points near x=0
+    a1:     parameter for distributing points near x=1
+    beta:   parameter for distribution points 
+    ```
+    '''
+    aa = np.power((1-np.cos(a0*np.pi))/2.0, beta)
+    dd = np.power((1-np.cos(a1*np.pi))/2.0, beta) - aa
+    yt = i/(nn-1.0)
+    a  = np.pi*(a0*(1-yt)+a1*yt)
+    c  = (np.power((1-np.cos(a))/2.0,beta)-aa)/dd
+
+    return c
