@@ -476,11 +476,11 @@ class PhysicalSec():
 
             if dudy[ii]>=0.0 and dudy[ii+1]<0.0:
                 self.xf_dict['S'][1] = ii
-                self.xf_dict['S'][2] = (0.0-dudy[ii])/(dudy[ii+1]-dudy[ii])
+                self.xf_dict['S'][2] = (0.0-dudy[ii])*(X[ii+1]-X[ii])/(dudy[ii+1]-dudy[ii])+X[ii]
 
-            if dudy[ii]<=0.0 and self.dudy[ii+1]>0.0:
+            if dudy[ii]<=0.0 and dudy[ii+1]>0.0:
                 self.xf_dict['R'][1] = ii
-                self.xf_dict['R'][2] = (0.0-dudy[ii])/(dudy[ii+1]-dudy[ii])
+                self.xf_dict['R'][2] = (0.0-dudy[ii])*(X[ii+1]-X[ii])/(dudy[ii+1]-dudy[ii])+X[ii]
         
             if dudy[ii]<min_Uy and dudy[ii-1]>=dudy[ii] and dudy[ii+1]>=dudy[ii]:
                 min_Uy = dudy[ii]
