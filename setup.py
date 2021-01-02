@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 from cfdpost import __version__, __name__
 
-with open('Readme.md') as f:
+with open('README.md') as f:
       long_description = f.read()
 
 setup(name=__name__,
