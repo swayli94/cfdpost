@@ -89,7 +89,7 @@ class cfl3d():
         if k < n*0.5:
             converge = False
 
-        elif np.std(CL) < max(0.01, 0.01*CL_):
+        elif np.max(CLs)-np.min(CLs) < max(0.01, 0.01*CL_):
             CL = CL_
             CD = np.mean(CDs)
             Cm = np.mean(Cms)
