@@ -6,6 +6,7 @@ import os
 import platform
 
 import numpy as np
+import struct as st
 
 
 class cfl3d():
@@ -467,20 +468,22 @@ class cfl3d():
         return True, field, foil
 
     @staticmethod
-    def readPlot2d(path: str, fname_grid='plot3d_grid.xyz', fname_sol='plot3d_sol.bin'):
+    def readPlot2d(path: str, fname_grid='plot3d_grid.xyz', fname_sol='plot3d_sol.bin', binary=True):
         '''
         Plot3D Format grid and solution:
         2D, Whole, Formatted, Single-Block Grid and Solution
 
         https://www.grc.nasa.gov/www/wind/valid/plot3d.html
 
-        >>> xy, qq, mach, alfa, reyn = readPlot2d(path: str, fname_grid='plot3d_grid.xyz', fname_sol='plot3d_sol.bin')
+        >>> xy, qq, mach, alfa, reyn = readPlot2d(path: str, 
+        >>>         fname_grid='plot3d_grid.xyz', fname_sol='plot3d_sol.bin', binary=True)
 
         ### Input:
         ```text
         path:       folder that contains the output files
         fname_grid: grid file name
         fname_sol:  solution file name
+        binary:     binary or ASCII format
         ```
 
         ### Return:
@@ -505,88 +508,124 @@ class cfl3d():
         alfa = 0.0
         reyn = 0.0
 
-        with open(os.path.join(path, fname_grid), 'r') as f:
-            lines = f.readlines()
+        if binary:
 
-            line = lines[1].split()
-            ni = int(line[0])
-            nj = int(line[1])
-            xy = np.zeros((ni,nj,2))
+            with open(os.path.join(path, fname_grid), 'rb') as f:
 
-            k_line = 2
-            k_item = 0
-            line   = lines[k_line].split()
-            len_line = len(line)
-            data = [float(a) for a in line]
+                _,  = st.unpack('i', f.read(4))
+                ni, = st.unpack('i', f.read(4))
+                nj, = st.unpack('i', f.read(4))
+                xy  = np.zeros((ni,nj,2))
 
-            for k in range(2):
-                for j in range(nj):
-                    for i in range(ni):
-                        # Read next line
-                        if k_item >= len_line:
-                            k_line += 1
-                            k_item = 0
-                            line = lines[k_line].split()
-                            len_line = len(line)
-                            data = [float(a) for a in line]
+                for v in range(2):
+                    for j in range(nj):
+                        for i in range(ni):
+                            xy[i,j,v], = st.unpack('d', f.read(8))
 
-                        # Assign to xx, yy
-                        xy[i,j,k] = data[k_item]
-                        k_item += 1
+            with open(os.path.join(path, fname_sol), 'rb') as f:
+
+                _,  = st.unpack('i', f.read(4))
+                ni, = st.unpack('i', f.read(4))
+                nj, = st.unpack('i', f.read(4))
+                qq  = np.zeros((ni,nj,4))
+
+                mach, = st.unpack('d', f.read(8))   # freestream Mach number
+                alfa, = st.unpack('d', f.read(8))   # freestream angle-of-attack
+                reyn, = st.unpack('d', f.read(8))   # freestream Reynolds number
+                time, = st.unpack('d', f.read(8))   # time
+
+                for q in range(4):
+                    for j in range(nj):
+                        for i in range(ni):
+                            qq[i,j,q], = st.unpack('d', f.read(8))
 
 
-        with open(os.path.join(path, fname_sol), 'r') as f:
-            lines = f.readlines()
+        else:
 
-            line = lines[1].split()
-            ni = int(line[0])
-            nj = int(line[1])
-            qq = np.zeros((ni,nj,4))
+            with open(os.path.join(path, fname_grid), 'r') as f:
+                lines = f.readlines()
 
-            line = lines[2].split()
-            mach = float(line[0])   # freestream Mach number
-            alfa = float(line[1])   # freestream angle-of-attack
-            reyn = float(line[2])   # freestream Reynolds number
-            time = float(line[3])   # time
+                line = lines[1].split()
+                ni = int(line[0])
+                nj = int(line[1])
+                xy = np.zeros((ni,nj,2))
 
-            k_line = 3
-            k_item = 0
-            line   = lines[k_line].split()
-            len_line = len(line)
-            data = [float(a) for a in line]
+                k_line = 2
+                k_item = 0
+                line   = lines[k_line].split()
+                len_line = len(line)
+                data = [float(a) for a in line]
 
-            for n in range(4):
-                for j in range(nj):
-                    for i in range(ni):
-                        # Read next line
-                        if k_item >= len_line:
-                            k_line += 1
-                            k_item = 0
-                            line = lines[k_line].split()
-                            len_line = len(line)
-                            data = [float(a) for a in line]
+                for k in range(2):
+                    for j in range(nj):
+                        for i in range(ni):
+                            # Read next line
+                            if k_item >= len_line:
+                                k_line += 1
+                                k_item = 0
+                                line = lines[k_line].split()
+                                len_line = len(line)
+                                data = [float(a) for a in line]
 
-                        # Assign to qq
-                        qq[i,j,n] = data[k_item]
-                        k_item += 1
+                            # Assign to xx, yy
+                            xy[i,j,k] = data[k_item]
+                            k_item += 1
+
+            with open(os.path.join(path, fname_sol), 'r') as f:
+                lines = f.readlines()
+
+                line = lines[1].split()
+                ni = int(line[0])
+                nj = int(line[1])
+                qq = np.zeros((ni,nj,4))
+
+                line = lines[2].split()
+                mach = float(line[0])   # freestream Mach number
+                alfa = float(line[1])   # freestream angle-of-attack
+                reyn = float(line[2])   # freestream Reynolds number
+                time = float(line[3])   # time
+
+                k_line = 3
+                k_item = 0
+                line   = lines[k_line].split()
+                len_line = len(line)
+                data = [float(a) for a in line]
+
+                for n in range(4):
+                    for j in range(nj):
+                        for i in range(ni):
+                            # Read next line
+                            if k_item >= len_line:
+                                k_line += 1
+                                k_item = 0
+                                line = lines[k_line].split()
+                                len_line = len(line)
+                                data = [float(a) for a in line]
+
+                            # Assign to qq
+                            qq[i,j,n] = data[k_item]
+                            k_item += 1
+
 
         return xy, qq, mach, alfa, reyn
 
     @staticmethod
-    def readPlot3d(path: str, fname_grid='plot3d_grid.xyz', fname_sol='plot3d_sol.bin'):
+    def readPlot3d(path: str, fname_grid='plot3d_grid.xyz', fname_sol='plot3d_sol.bin', binary=True):
         '''
         Plot3D Format grid and solution:
         3D, Whole, Unformatted, Multi-Block Grid and Solution
 
         https://www.grc.nasa.gov/www/wind/valid/plot3d.html
 
-        xyz, qq, mach, alfa, reyn = readPlot3d(path: str, fname_grid='plot3d_grid.xyz', fname_sol='plot3d_sol.bin')
+        >>> xyz, qq, mach, alfa, reyn = readPlot3d(path: str, 
+        >>>         fname_grid='plot3d_grid.xyz', fname_sol='plot3d_sol.bin', binary=True)
 
         ### Input:
         ```text
         path:       folder that contains the output files
         fname_grid: grid file name
         fname_sol:  solution file name
+        binary:     binary or ASCII format
         ```
 
         ### Return:
@@ -611,100 +650,154 @@ class cfl3d():
         alfa = 0.0
         reyn = 0.0
 
-        with open(os.path.join(path, fname_grid), 'r') as f:
-            xyz = []
-            lines = f.readlines()
+        if binary:
 
-            line = lines[0].split()
-            num_block = int(line[0])
-            ni = np.zeros(num_block)
-            nj = np.zeros(num_block)
-            nk = np.zeros(num_block)
+            with open(os.path.join(path, fname_grid), 'rb') as f:
 
-            for n in range(num_block):
-                line = lines[1+n].split()
-                ni[n] = int(line[0])
-                nj[n] = int(line[1])
-                nk[n] = int(line[2])
+                num_block, = st.unpack('i', f.read(4))
 
-            k_line = 1+num_block
-            k_item = 0
-            line   = lines[k_line].split()
-            len_line = len(line)
-            data = [float(a) for a in line]
+                xyz = []
+                ni = np.zeros(num_block)
+                nj = np.zeros(num_block)
+                nk = np.zeros(num_block)
 
-            for n in range(num_block):
-                temp = np.zeros((ni[n],nj[n],nk[n],3))
-                for d in range(3):
-                    for k in range(nk[n]):
-                        for j in range(nj[n]):
-                            for i in range(ni[n]):
-                                # Read next line
-                                if k_item >= len_line:
-                                    k_line += 1
-                                    k_item = 0
-                                    line = lines[k_line].split()
-                                    len_line = len(line)
-                                    data = [float(a) for a in line]
+                for n in range(num_block):
+                    ni[n],nj[n],nk[n], = st.unpack('iii', f.read(4))
 
-                                # Assign to xx, yy
-                                temp[i,j,k,d] = data[k_item]
-                                k_item += 1
+                for n in range(num_block):
+                    temp = np.zeros((ni[n],nj[n],nk[n],3))
+                    for d in range(3):
+                        for k in range(nk[n]):
+                            for j in range(nj[n]):
+                                for i in range(ni[n]):
+                                    temp[i,j,k,d], = st.unpack('d', f.read(8))
 
-                xyz.append(copy.deepcopy(temp))
+                    xyz.append(copy.deepcopy(temp))
 
-        with open(os.path.join(path, fname_sol), 'r') as f:
-            qq = []
-            lines = f.readlines()
+            with open(os.path.join(path, fname_sol), 'r') as f:
+                
+                num_block, = st.unpack('i', f.read(4))
+                qq = []
+                ni = np.zeros(num_block)
+                nj = np.zeros(num_block)
+                nk = np.zeros(num_block)
 
-            num_block = int(line[0])
-            ni = np.zeros(num_block)
-            nj = np.zeros(num_block)
-            nk = np.zeros(num_block)
+                for n in range(num_block):
+                    ni[n],nj[n],nk[n], = st.unpack('iii', f.read(4))
 
-            for n in range(num_block):
-                line = lines[1+n].split()
-                ni[n] = int(line[0])
-                nj[n] = int(line[1])
-                nk[n] = int(line[2])
+                for n in range(num_block):
+                    temp = np.zeros((ni[n],nj[n],nk[n],5))
 
-            k_line = 1+num_block
-            k_item = 0
-            line   = lines[k_line].split()
-            len_line = len(line)
-            data = [float(a) for a in line]
+                    mach, = st.unpack('d', f.read(8))   # freestream Mach number
+                    alfa, = st.unpack('d', f.read(8))   # freestream angle-of-attack
+                    reyn, = st.unpack('d', f.read(8))   # freestream Reynolds number
+                    time, = st.unpack('d', f.read(8))   # time
 
-            for n in range(num_block):
-                temp = np.zeros((ni[n],nj[n],nk[n],5))
+                    for d in range(5):
+                        for k in range(nk[n]):
+                            for j in range(nj[n]):
+                                for i in range(ni[n]):
+                                    temp[i,j,k,d], = st.unpack('d', f.read(8))
 
-                line = lines[k_line].split()
-                mach = float(line[0])   # freestream Mach number
-                alfa = float(line[1])   # freestream angle-of-attack
-                reyn = float(line[2])   # freestream Reynolds number
-                time = float(line[3])   # time
+                    qq.append(copy.deepcopy(temp))
 
-                k_line += 1
+
+        else:
+
+            with open(os.path.join(path, fname_grid), 'r') as f:
+                xyz = []
+                lines = f.readlines()
+
+                line = lines[0].split()
+                num_block = int(line[0])
+                ni = np.zeros(num_block)
+                nj = np.zeros(num_block)
+                nk = np.zeros(num_block)
+
+                for n in range(num_block):
+                    line = lines[1+n].split()
+                    ni[n] = int(line[0])
+                    nj[n] = int(line[1])
+                    nk[n] = int(line[2])
+
+                k_line = 1+num_block
+                k_item = 0
                 line   = lines[k_line].split()
                 len_line = len(line)
                 data = [float(a) for a in line]
 
-                for d in range(5):
-                    for k in range(nk[n]):
-                        for j in range(nj[n]):
-                            for i in range(ni[n]):
-                                # Read next line
-                                if k_item >= len_line:
-                                    k_line += 1
-                                    k_item = 0
-                                    line = lines[k_line].split()
-                                    len_line = len(line)
-                                    data = [float(a) for a in line]
+                for n in range(num_block):
+                    temp = np.zeros((ni[n],nj[n],nk[n],3))
+                    for d in range(3):
+                        for k in range(nk[n]):
+                            for j in range(nj[n]):
+                                for i in range(ni[n]):
+                                    # Read next line
+                                    if k_item >= len_line:
+                                        k_line += 1
+                                        k_item = 0
+                                        line = lines[k_line].split()
+                                        len_line = len(line)
+                                        data = [float(a) for a in line]
 
-                                # Assign to xx, yy
-                                temp[i,j,k,d] = data[k_item]
-                                k_item += 1
+                                    # Assign to xx, yy
+                                    temp[i,j,k,d] = data[k_item]
+                                    k_item += 1
 
-                qq.append(copy.deepcopy(temp))
+                    xyz.append(copy.deepcopy(temp))
+
+            with open(os.path.join(path, fname_sol), 'r') as f:
+                qq = []
+                lines = f.readlines()
+
+                num_block = int(line[0])
+                ni = np.zeros(num_block)
+                nj = np.zeros(num_block)
+                nk = np.zeros(num_block)
+
+                for n in range(num_block):
+                    line = lines[1+n].split()
+                    ni[n] = int(line[0])
+                    nj[n] = int(line[1])
+                    nk[n] = int(line[2])
+
+                k_line = 1+num_block
+                k_item = 0
+                line   = lines[k_line].split()
+                len_line = len(line)
+                data = [float(a) for a in line]
+
+                for n in range(num_block):
+                    temp = np.zeros((ni[n],nj[n],nk[n],5))
+
+                    line = lines[k_line].split()
+                    mach = float(line[0])   # freestream Mach number
+                    alfa = float(line[1])   # freestream angle-of-attack
+                    reyn = float(line[2])   # freestream Reynolds number
+                    time = float(line[3])   # time
+
+                    k_line += 1
+                    line   = lines[k_line].split()
+                    len_line = len(line)
+                    data = [float(a) for a in line]
+
+                    for d in range(5):
+                        for k in range(nk[n]):
+                            for j in range(nj[n]):
+                                for i in range(ni[n]):
+                                    # Read next line
+                                    if k_item >= len_line:
+                                        k_line += 1
+                                        k_item = 0
+                                        line = lines[k_line].split()
+                                        len_line = len(line)
+                                        data = [float(a) for a in line]
+
+                                    # Assign to xx, yy
+                                    temp[i,j,k,d] = data[k_item]
+                                    k_item += 1
+
+                    qq.append(copy.deepcopy(temp))
 
         return xyz, qq, mach, alfa, reyn
 
