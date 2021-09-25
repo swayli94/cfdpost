@@ -147,18 +147,25 @@ class PhysicalSec():
 
         return Cp
 
-    def Cp2Mw(self, n_ref=100, M_max=2.0):
+    @staticmethod
+    def toMw(Cp: np.array, Minf: float, n_ref=100, M_max=2.0):
         '''
         Converting Cp to wall Mach number
         '''
         Ma_ref = np.linspace(0.0, M_max, n_ref)
-        Cp_ref = self.IsentropicCp(Ma_ref, self.Minf)
-        f = interp1d(Cp_ref, Ma_ref, kind='cubic')
-
-        Cp_ = self.Cp.copy()
+        Cp_ref = PhysicalSec.IsentropicCp(Ma_ref, Minf)
+        f   = interp1d(Cp_ref, Ma_ref, kind='cubic')
+        Cp_ = Cp.copy()
         Cp_ = np.clip(Cp_, Cp_ref[-1], Cp_ref[0])
-
         return f(Cp_)
+
+    def Cp2Mw(self, n_ref=100, M_max=2.0):
+        '''
+        Converting Cp to wall Mach number
+        '''
+        Mw = PhysicalSec.toMw(self.Cp, self.Minf, n_ref=n_ref, M_max=M_max)
+
+        return Mw
 
     @staticmethod
     def ShapeFactor(sS, VtS, Tw: float, iUe: int):

@@ -374,7 +374,7 @@ class cfl3d():
         ```text
         path:   folder that contains the output files
         j0:     j index of the lower surface TE
-        j1:     j index of the upper surface TE
+        j1:     j index of the upper surface TE + 1
         ```
 
         ## cfl3d.prt index
@@ -453,19 +453,32 @@ class cfl3d():
         field = (X,Y,U,V,P,T,Ma,Cp,vi)
         f0.close()
 
-        nn = j1-j0
-        foil_x = np.zeros(nn)
-        foil_y = np.zeros(nn)
-        foil_Cp = np.zeros(nn)
-
-        for i in range(nn):
-            foil_x[i]  = X[j0+i,0]
-            foil_y[i]  = Y[j0+i,0]
-            foil_Cp[i] = Cp[j0+i,0]
-
-        foil = (foil_x, foil_y, foil_Cp)
+        foil = (X[j0:j1,0], Y[j0:j1,0], Cp[j0:j1,0])
 
         return True, field, foil
+
+    @staticmethod
+    def foildata(field_data: np.array, j0: int, j1: int):
+        '''
+        Extract wall data from field data
+
+        >>> data = field_data[j0:j1,0]
+
+        ### Inputs:
+        ```text
+        field_data: ndarray [nj,nk]
+        j0:         j index of the lower surface TE
+        j1:         j index of the upper surface TE + 1
+        ```
+
+        ## cfl3d.prt index
+        ```text
+        i : 1 - 1   symmetry plane
+        j : 1 - nj  from far field of lower surface TE to far field of upper surface TE
+        k : 1 - nk  from surface to far field
+        ```
+        '''
+        return field_data[j0:j1,0]
 
     @staticmethod
     def readPlot2d(path: str, fname_grid='plot3d_grid.xyz', fname_sol='plot3d_sol.bin', binary=True):
