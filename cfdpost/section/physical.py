@@ -169,16 +169,17 @@ class PhysicalSec():
         return Mw
 
     @staticmethod
-    def ShapeFactor(sS, VtS, Tw: float, iUe: int):
+    def ShapeFactor(sS, VtS, Tw: float, iUe: int, neglect_error=False):
         '''
         Calculate shape factor Hi & Hc by mesh points on a line pertenticular to the wall.
 
         ### Inputs:
         ```text
-        sS:     ndarray (n), distance of mesh points to wall
-        VtS:    ndarray (n), velocity component of mesh points (parallel to the wall)
+        sS:     ndarray [nMax], distance of mesh points to wall
+        VtS:    ndarray [nMax], velocity component of mesh points (parallel to the wall)
         Tw:     wall temperature (K)
         iUe:    index of mesh point locating the outer velocity Ue
+        neglect_error:  if True, set shape factor to 0 when error occurs
         ```
 
         ### Return:
@@ -189,7 +190,7 @@ class PhysicalSec():
 
         ### Note:
         ```text
-        XR  => 物面参考点，考察以 XR 为起点，物面法向 nR 方向上的数据点，共 nHi 个数据点
+        XR  => 物面参考点，考察以 XR 为起点，物面法向 nR 方向上的数据点，共 nMax 个数据点
         sS  => 数据点到物面距离
         VtS => 数据点速度在物面方向的分量
 
@@ -200,11 +201,21 @@ class PhysicalSec():
         Ue      测试结果显示，直接取最大Ue较为合理，取一定范围内平均，或取固定网格的值，效果不好
         ```
         '''
-        iUe = min(sS.shape[0], iUe)
+        nMax= sS.shape[0]
         Ue = VtS[iUe]
         se = sS[iUe]
         ds = 0.0
         tt = 0.0
+
+        if iUe>=nMax or iUe<=int(0.2*nMax):
+            if neglect_error:
+                return 0.0, 0.0
+            else:
+                print()
+                print('Vts: velocity component of mesh points')
+                print(VtS)
+                print()
+                raise Exception('Error [ShapeFactor]: iUe %d not reasonable (nMax=%d)'%(iUe, nMax))
 
         for i in range(iUe-1):
             a1 = Ue-VtS[i]
@@ -222,7 +233,7 @@ class PhysicalSec():
         return Hi, Hc
 
     @staticmethod
-    def getHi(X, Y, U, V, T, j0: int, j1: int, nHi: int):
+    def getHi(X, Y, U, V, T, j0: int, j1: int, nHi: int, neglect_error=False):
         '''
         Calculate shape factor Hi & Hc from field data
 
@@ -232,6 +243,7 @@ class PhysicalSec():
         j0:     j index of the lower surface TE
         j1:     j index of the upper surface TE
         nHi:    maximum number of mesh points in k direction for boundary layer
+        neglect_error:  if True, set shape factor to 0 when error occurs
         ```
 
         ### Return:
@@ -289,7 +301,7 @@ class PhysicalSec():
             iUe[j]  = np.argmax(np.abs(VtS[j,:]))
             dudy[j] = VtS[j,1]/sS[j,1]
             Tw[j]   = T[jj,0]
-        
+
         #* Smooth iUe at shock wave foot
         nspan = 4
         for j in range(nn-2*nspan):
@@ -302,7 +314,8 @@ class PhysicalSec():
 
         #* Calculate Hi & Hc
         for j in range(nn):
-            Hi[j], Hc[j] = PhysicalSec.ShapeFactor(sS[j,:], VtS[j,:], Tw[j], iUe[j])
+            Hi[j], Hc[j] = PhysicalSec.ShapeFactor(sS[j,:], VtS[j,:], 
+                            Tw[j], iUe[j], neglect_error=neglect_error)
 
         #* Limit leading edge Hi
         r1 = 1.0
