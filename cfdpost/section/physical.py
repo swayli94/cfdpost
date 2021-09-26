@@ -26,6 +26,7 @@ class PhysicalSec():
 
         'L': ['upper LE', _i, _X],                  # suction peak near leading edge on upper surface
         'T': ['upper TE', _i, _X],                  # trailing edge upper surface (98% chord length)
+        'H': ['upper surface max Ma', _i, _X],      # position of lower upper maximum Mach number
         'S': ['separation start', _i, _X],          # separation start position
         'R': ['reattachment', _i, _X],              # reattachment position
         'Q': ['lower LE', _i, _X],                  # suction peak near leading edge on lower surface
@@ -348,23 +349,21 @@ class PhysicalSec():
         if len(aa)==2:
             return aa[1]
 
-        if key in 'i':
+        if key == 'i':
             return aa[1]
-
-        if key in 'X':
+        if key == 'X':
             return aa[2]
-
-        if key in 'Cp':
+        if key == 'Cp':
             yy = self.Cp
-        elif key in 'Mw':
+        elif key == 'Mw':
             yy = self.Mw
-        elif key in 'Tw':
+        elif key == 'Tw':
             yy = self.Tw
-        elif key in 'Hi':
+        elif key == 'Hi':
             yy = self.Hi
-        elif key in 'Hc':
+        elif key == 'Hc':
             yy = self.Hc
-        elif key in 'dudy':
+        elif key == 'dudy':
             yy = self.dudy
         else:
             raise Exception('  key %s not valid'%(key))
@@ -439,6 +438,17 @@ class PhysicalSec():
                 self.xf_dict['T'][2] = 0.98
                 break
         
+        #* H => position of upper surface maximum Mach number
+        i_H = 0
+        max1 = -1.0
+        for i in np.arange(iLE, nn-2, 1):
+            if M[i-1]<=M[i] and M[i+1]<=M[i] and M[i]>max1:
+                max1 = M[i]
+                i_H = i
+
+        self.xf_dict['H'][1] = i_H
+        self.xf_dict['H'][2] = X[i_H]
+
         #* Q => suction peak near leading edge on lower surface
         for i in range(int(0.2*nn)):
             ii = iLE - i
