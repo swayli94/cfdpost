@@ -497,18 +497,20 @@ class PhysicalSec():
         #* R => reattachment position
         #* mUy => position of min(du/dy)
         min_Uy = 1e6
+        i_S = 0
         for i in range(int(0.5*nn)):
             ii = iLE + i
-            if X[ii]<0.2:
+            if X[ii]<0.02:
                 continue
             if X[ii]>0.98:
                 break
 
-            if dudy[ii]>=0.0 and dudy[ii+1]<0.0:
+            if dudy[ii]>=0.0 and dudy[ii+1]<0.0 and i_S==0:
+                i_S = ii
                 self.xf_dict['S'][1] = ii
                 self.xf_dict['S'][2] = (0.0-dudy[ii])*(X[ii+1]-X[ii])/(dudy[ii+1]-dudy[ii])+X[ii]
 
-            if dudy[ii]<=0.0 and dudy[ii+1]>0.0:
+            if dudy[ii]<=0.0 and dudy[ii+1]>0.0 and i_S!=0:
                 self.xf_dict['R'][1] = ii
                 self.xf_dict['R'][2] = (0.0-dudy[ii])*(X[ii+1]-X[ii])/(dudy[ii+1]-dudy[ii])+X[ii]
         
@@ -591,58 +593,53 @@ class PhysicalSec():
         dMwcri_1: critical value locating shock wave front
         ```
         '''
-        X   = self.x
-        xx  = self.xx
-        mu  = self.mu
+        X   = self.x        # [n]
+        xx  = self.xx       # [1000]
+        mu  = self.mu       # [1000]
         nn  = xx.shape[0]
         iLE = self.iLE
 
         dMw = np.zeros(nn)
         for i in range(nn-1):
-            if xx[i]>0.98:
+            if xx[i]<=0.02:
+                continue
+            if xx[i]>=0.98:
                 continue
             dMw[i] = (mu[i+1]-mu[i])/(xx[i+1]-xx[i])
             dMw[i] = min(dMw[i], 2)
 
-        flag = PhysicalSec.check_singleshock(xx, mu, dMw)
+        d2Mw = np.zeros(nn)
+        for i in range(nn-1):
+            if xx[i]>0.98:
+                continue
+            
+            d2Mw[i] = (dMw[i+2]+dMw[i+1]-dMw[i]-dMw[i-1])/2/(xx[i+1]-xx[i-1])
+            #d2Mw[i] = (dMw[i+1]-dMw[i-1])/(xx[i+1]-xx[i-1])
+            #d2Mw[i] = (0.5*dMw[i+3]+0.5*dMw[i+2]+2*dMw[i+1]-
+            #2*dMw[i]-0.5*dMw[i-1]-0.5*dMw[i-2])/3/(xx[i+1]-xx[i-1])
+
+        #* Check shock and shock properties
+        flag, i_F, i_1, i_U, i_3 = PhysicalSec.check_singleshock(xx, mu, dMw, d2Mw, dMwcri_1)
+
         self.xf_dict['lSW'][1] = flag
         if not flag==1:
             return 0
 
         #* F => shock foot position
-        i_F = np.argmin(dMw)
-        x_F = xx[i_F]
-        self.xf_dict['F'][1] = np.argmin(np.abs(X[iLE:]-x_F)) + iLE
-        self.xf_dict['F'][2] = x_F
+        self.xf_dict['F'][1] = np.argmin(np.abs(X[iLE:]-xx[i_F])) + iLE
+        self.xf_dict['F'][2] = xx[i_F]
 
         #* 1 => shock wave front position
-        # Find the kink position of dMw in range [x_F-0.2, x_F], defined as dMw = -1
-        i_1 = 0
-        for i in np.arange(i_F, 1, -1):
-            if xx[i]<x_F-0.2:
-                break
-            if dMw[i]>=dMwcri_1 and dMw[i+1]<dMwcri_1:
-                i_1 = i
-                break
-        x_1 = xx[i_1]
-        self.xf_dict['1'][1] = np.argmin(np.abs(X[iLE:]-x_1)) + iLE
-        self.xf_dict['1'][2] = x_1
+        self.xf_dict['1'][1] = np.argmin(np.abs(X[iLE:]-xx[i_1])) + iLE
+        self.xf_dict['1'][2] = xx[i_1]
 
         #* 3 => position of just downstream the shock
-        # Find the first flat position of Mw in range [x_F, x_F+0.2], defined as dMw = 0 or -1
-        i_3 = 0
-        for i in np.arange(i_F, nn-1, 1):
-            if xx[i]>x_F+0.2:
-                break
-            if dMw[i]<=dMwcri_1 and dMw[i+1]>dMwcri_1:
-                i_3 = i
-            if dMw[i]<=0.0 and dMw[i+1]>0.0:
-                i_3 = i
-                break
+        self.xf_dict['3'][1] = np.argmin(np.abs(X[iLE:]-xx[i_3])) + iLE
+        self.xf_dict['3'][2] = xx[i_3]
 
-        x_3 = xx[i_3]
-        self.xf_dict['3'][1] = np.argmin(np.abs(X[iLE:]-x_3)) + iLE
-        self.xf_dict['3'][2] = x_3
+        #* U => local sonic position
+        self.xf_dict['U'][1] = np.argmin(np.abs(X[iLE:]-xx[i_U])) + iLE
+        self.xf_dict['U'][2] = xx[i_U]
 
         #* D => dent on the suction plateau
         # minimum Mw between L and 1
@@ -658,26 +655,15 @@ class PhysicalSec():
                 i_D = i
                 min_D = mu[i]
 
-        x_D = xx[i_D]
-        self.xf_dict['D'][1] = np.argmin(np.abs(X[iLE:]-x_D)) + iLE
-        self.xf_dict['D'][2] = x_D
-
-        #* U => local sonic position
-        i_U = 0
-        for i in np.arange(i_1, i_3, 1):
-            if mu[i]>=1.0 and mu[i+1]<1.0:
-                i_U = i
-                break
-        x_U = xx[i_U]
-        self.xf_dict['U'][1] = np.argmin(np.abs(X[iLE:]-x_U)) + iLE
-        self.xf_dict['U'][2] = x_U
+        self.xf_dict['D'][1] = np.argmin(np.abs(X[iLE:]-xx[i_D])) + iLE
+        self.xf_dict['D'][2] = xx[i_D]
 
         #* A => maximum Mw after shock
         # Find the maximum position of Mw in range [x_3, x_3+0.4]
         i_A = 0
         max_A = 0.0
         for i in np.arange(i_3, nn-1, 1):
-            if xx[i]>x_3+0.4:
+            if xx[i]>xx[i_3]+0.4:
                 break
             if mu[i]>max_A:
                 i_A = i
@@ -737,51 +723,125 @@ class PhysicalSec():
         self.xf_dict['N'][2] = x_N
 
     @staticmethod
-    def check_singleshock(xu, Mw, dMw, dMwcri_F=-2.0):
+    def shock_property(xu, mu, dMw, d2Mw, dMwcri_1):
+        '''
+        >>> i_F, i_1, i_U, i_3 = shock_property(xu, mu, dMw, d2Mw, dMwcri_1)
+
+        ### Return:
+        ```text
+        Index of xu for: F, 1, U, 3
+        ```
+        '''
+        nn  = xu.shape[0]
+
+        #* F => shock foot position
+        i_F = np.argmin(dMw)
+        x_F = xu[i_F]
+
+        #* 1 => shock wave front position
+        # Find the kink position of dMw in range [x_F-0.2, x_F], defined as dMw = -1
+        i_1 = 0
+        i_cri = 0
+        i_md2 = 0
+        for i in np.arange(i_F, 1, -1):
+
+            # 1. Within the range of [x_F-0.2, x_F]
+            if xu[i]<x_F-0.2:
+                break
+
+            # 2. Locate dMw = dMwcri_1 (tend to go too much upstream)
+            if dMw[i]>=dMwcri_1 and dMw[i+1]<dMwcri_1 and i_cri==0:
+                i_cri = i
+
+            # 3. Locate min d2Mw/dx2 (tend to go too much downstream)
+            if d2Mw[i]<=d2Mw[i-1] and d2Mw[i]>d2Mw[i+1] and i_md2==0:
+                i_md2 = i
+        
+        if i_md2-i_cri > 2*(i_F-i_md2):
+            i_1 = i_md2
+        elif 2*(i_md2-i_cri) < i_F-i_md2:
+            i_1 = i_cri
+        else:
+            i_1 = int(0.5*(i_cri+i_md2))
+
+        #* 3 => position of just downstream the shock
+        # Find the first flat position of Mw in range [x_F, x_F+0.2], defined as dMw = 0 or -1
+        i_3 = 0
+        for i in np.arange(i_F, nn-1, 1):
+            if xu[i]>x_F+0.2:
+                break
+            if dMw[i]<=dMwcri_1 and dMw[i+1]>dMwcri_1:
+                i_3 = i
+            if dMw[i]<=0.0 and dMw[i+1]>0.0:
+                i_3 = i
+                break
+
+        #* U => local sonic position
+        i_U = 0
+        for i in np.arange(i_1, i_3, 1):
+            if mu[i]>=1.0 and mu[i+1]<1.0:
+                i_U = i
+                break
+
+        return i_F, i_1, i_U, i_3
+
+    @staticmethod
+    def check_singleshock(xu, mu, dMw, d2Mw, dMwcri_1):
         '''
         Check whether is single shock wave or not
 
+        >>> flag, i_F, i_1, i_U, i_3 = check_singleshock(xu, mu, dMw, d2Mw, dMwcri_1)
+
         ### Inputs:
         ```text
-        xx:     ndarray, x location
-        Mw:     ndarray, wall Mach number
+        xu:     ndarray, x location
+        mu:     ndarray, wall Mach number of upper surface
         dMw:    ndarray, slope of wall Mach number
-        dMwcri_F: critical value filtering shock wave
+        dMwcri_1: critical value locating shock wave front
         ```
 
-        ### Return: flag
+        ### flag: 
         ```text
-        1:  single shock wave
-        0:  shockless
+         1: single shock wave
+         0: shockless
         -1: multiple shock waves 
         ```
         '''
-        nn = xu.shape[0]
-        dm = dMw.copy()
-        i1 = np.argmin(dm)
-        d1 = dm[i1]
+        #* Get 1st shock
+        i_F, i_1, i_U, i_3 = PhysicalSec.shock_property(xu, mu, dMw, d2Mw, dMwcri_1)
+        d_F = dMw[i_F]
 
-        # Check if shockless
-        if Mw[i1]<1.0 or dm[i1]>dMwcri_F:
-            return 0
+        #* Check if shockless
+        # Check if Mw jump exists and M1>1.0
+        if d_F>dMwcri_1 or mu[i_1]<1.0:
+            return 0, 0, 0, 0, 0
 
-        # Check if second shock wave exists
-        for i in np.arange(i1, nn, 1, dtype=int):
+        #* Check if 2nd shock wave exists
+        # Remove first shock
+        dm  = dMw.copy()
+        d2m = d2Mw.copy()
+        nn  = xu.shape[0]
+        for i in np.arange(i_F, nn, 1, dtype=int):
             if dm[i]<=0.0:
                 dm[i]=0.0
+                d2m[i]=0.0
             else:
                 break
-        for i in np.arange(i1, 0, -1, dtype=int):
+        for i in np.arange(i_F, 0, -1, dtype=int):
             if dm[i]<=0.0:
                 dm[i]=0.0
+                d2m[i]=0.0
             else:
                 break
+        
+        # Locate second shock
+        dMwcri_F = max(dMwcri_1, 0.5*d_F)
+        _iF, _i1, _iU, _i3 = PhysicalSec.shock_property(xu, mu, dm, d2m, dMwcri_1)
+        if dm[_iF]<dMwcri_F and _i1!=0 and _i3!=0:
+            if mu[_i1]>1.0 and mu[_i3]<1.05:
+                return -1, 0, 0, 0, 0
 
-        i2 = np.argmin(dm)
-        if Mw[i2]>1.0 and dm[i2]<max(dMwcri_F, 0.5*d1):
-            return -1
-
-        return 1
+        return 1, i_F, i_1, i_U, i_3
 
     def aux_features(self):
         '''
