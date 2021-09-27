@@ -54,6 +54,11 @@ class PhysicalSec():
         'Err': ['suc Cp area', _value],             # Cp integral of suction plateau fluctuation
         'DMp': ['Mw dent on plateau', _value],      # Mw dent on suction plateau
         'CLU': ['upper CL', _value],                # CL of upper surface
+        'CLL': ['lower CL', _value],                # CL of lower surface
+        'CLw': ['windward CL', _value],             # CL of windward surfaces (before crest point)
+        'Cdw': ['windward Cdp', _value],            # Cdp of windward surfaces (before crest point)
+        'CLl': ['leeward CL', _value],              # CL of leeward surfaces (behind crest point)
+        'Cdl': ['leeward Cdp', _value],             # Cdp of leeward surfaces (behind crest point)
         'kaf': ['slope aft', _value]                # average Mw slope of the aft upper surface (3/N~T)
     }
 
@@ -530,6 +535,7 @@ class PhysicalSec():
         yu = self.yu
         yl = self.yl
         iLE = self.iLE
+        n0 = xx.shape[0]
 
         #* tm => maximum thickness
         #* tu => highest point on upper surface
@@ -549,38 +555,29 @@ class PhysicalSec():
         aa = self.AoA/180.0*np.pi
         x0 = np.array([0.0, 0.0])
         x1 = np.array([np.cos(aa), np.sin(aa)])
-        rr = -1.0
-        rc = 0.0
-        xc1= 0.0
-        for i in range(xx.shape[0]):
-            xt = np.array([xx[i], yu[i]])
-            s, _ = ratio_vec(x0, x1, xt)
-            if s < rr:
-                break
-            if s > rc:
-                rc = s
-                xc1 = xx[i]
-            rr = s
 
-        self.xf_dict['Cu'][1] = np.argmin(np.abs(X[iLE:]-xc1)) + iLE
-        self.xf_dict['Cu'][2] = xc1
+        ds = np.zeros(n0)
+        for i in range(n0):
+            xt = np.array([xx[i], yu[i]])
+            if xx[i] > 0.9:
+                continue
+            ds[i], _ = ratio_vec(x0, x1, xt)
+        ii = np.argmax(ds)
+
+        self.xf_dict['Cu'][1] = np.argmin(np.abs(X[iLE:]-xx[ii])) + iLE
+        self.xf_dict['Cu'][2] = xx[ii]
 
         #* Cl => crest point on lower surface
-        rr = -1.0
-        rc = 0.0
-        xc2= 0.0
-        for i in range(xx.shape[0]):
+        ds = np.zeros(n0)
+        for i in range(n0):
+            if xx[i] > 0.9:
+                continue
             xt = np.array([xx[i], yl[i]])
-            s, _ = ratio_vec(x0, x1, xt)
-            if s < rr:
-                break
-            if s > rc:
-                rc = s
-                xc2 = xx[i]
-            rr = s
+            ds[i], _ = ratio_vec(x0, x1, xt)
+        ii = np.argmax(ds)
 
-        self.xf_dict['Cl'][1] = np.argmin(np.abs(X[:iLE]-xc2))
-        self.xf_dict['Cl'][2] = xc2
+        self.xf_dict['Cl'][1] = np.argmin(np.abs(X[:iLE]-xx[ii]))
+        self.xf_dict['Cl'][2] = xx[ii]
 
     def locate_shock(self, dMwcri_1=-1.0):
         '''
@@ -847,20 +844,20 @@ class PhysicalSec():
         '''
         Calculate auxiliary features based on basic, geo, and shock features.
 
-        ### Get value of: Length, lSW, DCp, Err, DMp, CLU, kaf
+        ### Get value of: Length, lSW, DCp, Err, DMp, CLU, kaf, CLw, Cdw, CLl, Cdl
         '''
         X  = self.x
-        xx = self.xx
-        mu = self.mu
-        nn = xx.shape[0]
+        Y  = self.y
         x1 = self.xf_dict['1'][2]
+        n0 = len(X)
         
         self.xf_dict['L1U'][1] = self.xf_dict['U'][2] - x1
         self.xf_dict['L13'][1] = self.xf_dict['3'][2] - x1
         self.xf_dict['LSR'][1] = self.xf_dict['R'][2] - self.xf_dict['S'][2]
         self.xf_dict['DCp'][1] = self.getValue('3','Cp') - self.getValue('1','Cp')
 
-        rr = np.cos(self.AoA/180.0*np.pi)
+        cosA = np.cos(self.AoA/180.0*np.pi)
+        sinA = np.sin(self.AoA/180.0*np.pi)
         #* Err => Cp integral of suction plateau fluctuation
         #* DMp => Mw dent on suction plateau
         # If can not find suction peak, err = 0, DMp = 0.0
@@ -888,15 +885,8 @@ class PhysicalSec():
                 ss = (1-tt)*Mw0 + tt*Mw1
                 DMp = max(DMp, ss-self.Mw[i])
 
-        self.xf_dict['Err'][1] = abs(Err)*rr
+        self.xf_dict['Err'][1] = abs(Err)*cosA
         self.xf_dict['DMp'][1] = DMp
-
-        #* CLU => CL of upper surface
-        CLU = 0.0
-        for i in np.arange(self.iLE, len(X)-1, 1):
-            CLU += 0.5*(self.Cp[i]+self.Cp[i+1])*(X[i+1]-X[i])
-
-        self.xf_dict['CLU'][1] = abs(CLU)*rr
 
         #* kaf => average Mw slope of the aft upper surface (3/N~T)
         xN  = self.xf_dict['N'][2]
@@ -908,6 +898,50 @@ class PhysicalSec():
             mN = self.getValue('3','Mw')
 
         self.xf_dict['kaf'][1] = (mT-mN)/(xT-xN)
+
+        #* CLU => CL of upper surface
+        # wall vector = [dx,dy]
+        # outward wall vector = [-dy,dx]
+        # outward pressure force vector = Cp*[dy,-dx]
+        PFy = 0.0   # y direction pressure force
+        PFx = 0.0   # x direction pressure force
+
+        for i in np.arange(self.iLE, n0-1, 1):
+            Cp_ = 0.5*(self.Cp[i]+self.Cp[i+1])
+            PFx += Cp_*(Y[i+1]-Y[i])
+            PFy += Cp_*(X[i]-X[i+1])
+        self.xf_dict['CLU'][1] = PFy*cosA - PFx*sinA
+        
+        PFx = 0.0; PFy = 0.0
+        for i in np.arange(0, self.iLE, 1):
+            Cp_ = 0.5*(self.Cp[i]+self.Cp[i+1])
+            PFx += Cp_*(Y[i+1]-Y[i])
+            PFy += Cp_*(X[i]-X[i+1])
+        self.xf_dict['CLL'][1] = PFy*cosA - PFx*sinA
+
+        #* Windward and leeward pressure force (CL, Cdp)
+        icu = self.xf_dict['Cu'][1]
+        icl = self.xf_dict['Cl'][1]
+
+        PFx = 0.0; PFy = 0.0
+        for i in np.arange(0, icl, 1):          # Leeward (lower surface)
+            Cp_  = 0.5*(self.Cp[i]+self.Cp[i+1])
+            PFx += Cp_*(Y[i+1]-Y[i])
+            PFy += Cp_*(X[i]-X[i+1])
+        for i in np.arange(icu, n0-1, 1):       # Leeward (upper surface)
+            Cp_  = 0.5*(self.Cp[i]+self.Cp[i+1])
+            PFx += Cp_*(Y[i+1]-Y[i])
+            PFy += Cp_*(X[i]-X[i+1])
+        self.xf_dict['CLl'][1] = PFy*cosA - PFx*sinA
+        self.xf_dict['Cdl'][1] = PFy*sinA + PFx*cosA
+
+        PFx = 0.0; PFy = 0.0
+        for i in np.arange(icl, icu, 1):        # Windward
+            Cp_ = 0.5*(self.Cp[i]+self.Cp[i+1])
+            PFx += Cp_*(Y[i+1]-Y[i])
+            PFy += Cp_*(X[i]-X[i+1])
+        self.xf_dict['CLw'][1] = PFy*cosA - PFx*sinA
+        self.xf_dict['Cdw'][1] = PFy*sinA + PFx*cosA
 
     def extract_features(self):
         '''
