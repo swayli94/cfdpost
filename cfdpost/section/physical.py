@@ -1226,7 +1226,7 @@ def ratio_vec(x0, x1, x):
     v  = (x1-x0)/l0
     l2 = np.dot(v, x-x0)
     t  = l2/l1
-    s  = np.sqrt(l1**2 - l2**2)
+    s  = np.sqrt(l1**2 - l2**2 + 1E-9)
 
     return s, t
 
