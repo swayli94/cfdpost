@@ -579,7 +579,7 @@ class PhysicalSec():
         self.xf_dict['Cl'][1] = np.argmin(np.abs(X[:iLE]-xx[ii]))
         self.xf_dict['Cl'][2] = xx[ii]
 
-    def locate_shock(self, dMwcri_1=-1.0):
+    def locate_shock(self, dMwcri_1=-1.0, info=False):
         '''
         Locate the index and position of shock wave related flow features.
 
@@ -607,16 +607,16 @@ class PhysicalSec():
 
         d2Mw = np.zeros(nn)
         for i in range(nn-1):
-            if xx[i]>0.98:
+            if xx[i]<0.02 or xx[i]>0.95:
                 continue
             
-            d2Mw[i] = (dMw[i+2]+dMw[i+1]-dMw[i]-dMw[i-1])/2/(xx[i+1]-xx[i-1])
+            #d2Mw[i] = (dMw[i+2]+dMw[i+1]-dMw[i]-dMw[i-1])/2/(xx[i+1]-xx[i-1])
             #d2Mw[i] = (dMw[i+1]-dMw[i-1])/(xx[i+1]-xx[i-1])
-            #d2Mw[i] = (0.5*dMw[i+3]+0.5*dMw[i+2]+2*dMw[i+1]-
-            #2*dMw[i]-0.5*dMw[i-1]-0.5*dMw[i-2])/3/(xx[i+1]-xx[i-1])
+            d2Mw[i] = (0.5*dMw[i+7]+0.5*dMw[i+4]+2*dMw[i+1]-
+                        2*dMw[i]-0.5*dMw[i-3]-0.5*dMw[i-6])/4.5/(xx[i+1]-xx[i-1])
 
         #* Check shock and shock properties
-        flag, i_F, i_1, i_U, i_3 = PhysicalSec.check_singleshock(xx, mu, dMw, d2Mw, dMwcri_1)
+        flag, i_F, i_1, i_U, i_3 = PhysicalSec.check_singleshock(xx, mu, dMw, d2Mw, dMwcri_1, info=info)
 
         self.xf_dict['lSW'][1] = flag
         if not flag==1:
@@ -761,6 +761,17 @@ class PhysicalSec():
         else:
             i_1 = int(0.5*(i_cri+i_md2))
 
+        '''
+        print(i_cri, i_md2, i_F, xu[i_cri], xu[i_md2], dMw[i_md2], dMw[i_F])
+
+        import matplotlib.pyplot as plt
+        plt.plot(xu, mu, 'b')
+        plt.plot(xu, d2Mw/1000, 'r')
+        plt.plot([xu[i_cri], xu[i_md2]], [mu[i_cri], mu[i_md2]], 'bo')
+        plt.plot([xu[i_1]], [mu[i_1]], 'ro')
+        plt.show()
+        '''
+
         #* 3 => position of just downstream the shock
         # Find the first flat position of Mw in range [x_F, x_F+0.2], defined as dMw = 0 or -1
         i_3 = 0
@@ -779,11 +790,15 @@ class PhysicalSec():
             if mu[i]>=1.0 and mu[i+1]<1.0:
                 i_U = i
                 break
+        
+        #* Neglect small Mw bump near leading edge
+        if xu[i_1]<0.1 and mu[i_1]<1.10:
+            i_1=0; i_U=0; i_3=0
 
         return i_F, i_1, i_U, i_3
 
     @staticmethod
-    def check_singleshock(xu, mu, dMw, d2Mw, dMwcri_1):
+    def check_singleshock(xu, mu, dMw, d2Mw, dMwcri_1, info=False):
         '''
         Check whether is single shock wave or not
 
@@ -810,7 +825,9 @@ class PhysicalSec():
 
         #* Check if shockless
         # Check if Mw jump exists and M1>1.0
-        if d_F>dMwcri_1 or mu[i_1]<1.0:
+        if d_F>dMwcri_1 or mu[i_1]<1.0 or i_1==0:
+            if info:
+                print('  Shockless:    XF=%.2f MF=%.2f dM/dX=%.2f'%(xu[i_F], mu[i_F], d_F))
             return 0, 0, 0, 0, 0
 
         #* Check if 2nd shock wave exists
@@ -835,7 +852,12 @@ class PhysicalSec():
         dMwcri_F = max(dMwcri_1, 0.5*d_F)
         _iF, _i1, _iU, _i3 = PhysicalSec.shock_property(xu, mu, dm, d2m, dMwcri_1)
         if dm[_iF]<dMwcri_F and _i1!=0 and _i3!=0:
+            # Locate sharp change of Mw
+
             if mu[_i1]>1.0 and mu[_i3]<1.05:
+                # Check supersonic wave front and 'subsonic' wave hind
+                if info:
+                    print('  Second shock: X1=%.2f M1=%.2f M2=%.2f'%(xu[_i1], mu[_i1], mu[_i3]))
                 return -1, 0, 0, 0, 0
 
         return 1, i_F, i_1, i_U, i_3
@@ -943,14 +965,14 @@ class PhysicalSec():
         self.xf_dict['CLw'][1] = PFy*cosA - PFx*sinA
         self.xf_dict['Cdw'][1] = PFy*sinA + PFx*cosA
 
-    def extract_features(self):
+    def extract_features(self, info=False):
         '''
         Extract flow features list in the dictionart.
         '''
         self.locate_basic()
         self.locate_sep()
         self.locate_geo()
-        i_1 = self.locate_shock()
+        i_1 = self.locate_shock(info=info)
         self.locate_BL(i_1)
         self.aux_features()
 
