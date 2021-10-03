@@ -19,11 +19,12 @@ class cfl3d():
         pass
 
     @staticmethod
-    def readCoef(path: str, n=10):
+    def readCoef(path: str, n=100, output_error=False):
         '''
         Read clcd_wall.dat or clcd.dat of the CFL3D outputs.
 
-        >>> converge, CL, CD, Cm, CDp, CDf = readCoef(path: str, n=10)
+        >>> converge, CL, CD, Cm, CDp, CDf = readCoef(path: str, n=100, output_error=False)
+        >>> converge, CL, CD, Cm, CDp, CDf, errs = readCoef(path: str, n=100, output_error=True)
 
         ### Inputs:
         ```text
@@ -34,6 +35,7 @@ class cfl3d():
         ### Return:
         ```text
         converge (bool), CL, CD, Cm(z), CDp, CDf
+        errs = [err_CL, err_CD, err_Cm, err_CDp, err_CDf]
         ```
         '''
         converge = True
@@ -42,6 +44,7 @@ class cfl3d():
         Cm = 0.0
         CDp = 0.0
         CDf = 0.0
+        errs = [0.0 for _ in range(5)]
 
         if platform.system() in 'Windows':
             out1 = path+'\\clcd.dat'
@@ -56,7 +59,10 @@ class cfl3d():
         elif os.path.exists(out2): 
             out = out2
         else:
-            return False, CL, CD, Cm, CDp, CDf
+            if output_error:
+                return False, CL, CD, Cm, CDp, CDf, errs
+            else:
+                return False, CL, CD, Cm, CDp, CDf
 
         CLs = np.zeros(n)
         CDs = np.zeros(n)
@@ -86,7 +92,7 @@ class cfl3d():
                 CDfs[k] = float(L1[9])
                 k += 1
 
-        CL_ = np.mean(CLs)
+        CL_  = np.mean(CLs)
         if k < n*0.5:
             converge = False
 
@@ -96,18 +102,27 @@ class cfl3d():
             Cm = np.mean(Cms)
             CDp = np.mean(CDps)
             CDf = np.mean(CDfs)
+            errs[0] = np.max(CLs)-np.min(CLs)
+            errs[1] = np.max(CDs)-np.min(CDs)
+            errs[2] = np.max(Cms)-np.min(Cms)
+            errs[3] = np.max(CDps)-np.min(CDps)
+            errs[4] = np.max(CDfs)-np.min(CDfs)
 
         else:
             converge = False
-
-        return converge, CL, CD, Cm, CDp, CDf
+        
+        if output_error:
+            return converge, CL, CD, Cm, CDp, CDf, errs
+        else:
+            return converge, CL, CD, Cm, CDp, CDf
 
     @staticmethod
-    def readAoA(path: str, n=10):
+    def readAoA(path: str, n=100, output_error=False):
         '''
         Read cfl3d.alpha of the CFL3D outputs.
 
-        >>> succeed, AoA = readAoA(path: str, n=10)
+        >>> succeed, AoA = readAoA(path: str, n=100, output_error=False)
+        >>> succeed, AoA, err = readAoA(path: str, n=100, output_error=True)
 
         ### Inputs:
         ```text
@@ -129,7 +144,10 @@ class cfl3d():
             out = path+'/cfl3d.alpha'
 
         if not os.path.exists(out):
-            return False, AoA
+            if output_error:
+                return False, AoA, 0.0
+            else:
+                return False, AoA
 
         AoAs = np.zeros(n)
         with open(out, 'r') as f:
@@ -137,7 +155,10 @@ class cfl3d():
 
             if len(lines)==0:
                 f.close()
-                return False, AoA
+                if output_error:
+                    return False, AoA, 0.0
+                else:
+                    return False, AoA
 
             for k in range(n):
                 L1 = lines[-k-1].split()
@@ -145,7 +166,10 @@ class cfl3d():
 
         AoA = np.mean(AoAs)
 
-        return succeed, AoA
+        if output_error:
+            return succeed, AoA, np.max(AoAs)-np.min(AoAs)
+        else:
+            return succeed, AoA
 
     @staticmethod
     def readinput(path: str):
