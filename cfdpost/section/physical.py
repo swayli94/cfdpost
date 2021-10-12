@@ -408,7 +408,7 @@ class PhysicalSec():
         return f(xx) 
 
     #TODO: locate the position of flow features
-    def locate_basic(self):
+    def locate_basic(self, dMwcri_L=1.0):
         '''
         Locate the index and position of basic flow features.
 
@@ -423,31 +423,28 @@ class PhysicalSec():
         #TODO: Basic features
         #* L => suction peak near leading edge on upper surface
         # 1: maximum extreme point
-        # 2: outermost point in X + Mw = 0 direction
+        # 2: dMw/dx = 1
         i_L = 0
-        x_L = 0.0
         for i in range(int(0.25*nn)):
             ii = i + iLE
+            if X[ii] > 0.2:
+                break
             if M[ii-1]<=M[ii] and M[ii]>=M[ii+1]:
                 i_L = ii
-                x_L = X[ii]
                 break
-
+    
         if i_L == 0:
-            max_L = -1.0e6
-            vec = np.array([-1.0,1.0])
-
+            dMw2 = 0.0
             for i in range(int(0.25*nn)):
-                ii = i + iLE
-                vv = np.array([X[ii], M[ii]])
-                dd = np.dot(vv, vec)
-                if dd > max_L:
-                    max_L = dd
+                ii = i + iLE+1
+                dMw1 = dMw2
+                dMw2 = (M[ii+1]-M[ii])/(X[ii+1]-X[ii])
+                if dMw1>=dMwcri_L and dMw2<dMwcri_L:
                     i_L = ii
-                    x_L = X[ii]
+                    break
 
         self.xf_dict['L'][1] = i_L
-        self.xf_dict['L'][2] = x_L
+        self.xf_dict['L'][2] = X[i_L]
 
         #* T => trailing edge upper surface (98% chord length)
         for i in range(int(0.2*nn)):
@@ -657,15 +654,17 @@ class PhysicalSec():
         self.xf_dict['D'][2] = xx[i_D]
 
         #* A => maximum Mw after shock
-        # Find the maximum position of Mw in range [x_3, x_3+0.4]
+        # Find the maximum position of Mw in range [x_3, 0.9]
         i_A = 0
         max_A = 0.0
         for i in np.arange(i_3, nn-1, 1):
-            if xx[i]>xx[i_3]+0.4:
+            if xx[i]>0.9:
                 break
             if mu[i]>max_A:
                 i_A = i
                 max_A = mu[i]
+            elif mu[i]>=mu[i_3]*0.8 and mu[i]>mu[i-1] and mu[i]>mu[i+1]:
+                i_A = i
 
         x_A = xx[i_A]
         self.xf_dict['A'][1] = np.argmin(np.abs(X[iLE:]-x_A)) + iLE
@@ -797,12 +796,12 @@ class PhysicalSec():
             if dMw[i]<=0.0 and dMw[i+1]>0.0:
                 i_flat = i
 
-        if i_cri-i_md2 > 2*(i_md2-i_F):
+        if i_flat!=0 and i_flat-i_F < 2*(i_cri-i_F):
+            i_3 = i_flat
+        elif i_cri-i_md2 > 2*(i_md2-i_F):
             i_3 = i_md2
         elif 2*(i_cri-i_md2) < i_md2-i_F:
             i_3 = i_cri
-        elif i_flat-i_F < 2*(i_cri-i_F) and i_flat!=0:
-            i_3 = i_flat
         else:
             i_3 = int(0.5*(i_cri+i_md2))
 
