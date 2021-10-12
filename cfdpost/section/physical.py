@@ -38,11 +38,11 @@ class PhysicalSec():
         '3': ['shock hind', _i, _X],                # position of just downstream the shock
         'D': ['dent on plateau', _i, _X],           # dent on the suction plateau
         'U': ['local sonic', _i, _X],               # local sonic position
-                                                    # Note: for weak shock waves, may not reach Mw=1
-                                                    #       define position of U as Mw minimal extreme point after shock foot
+        #                                           # Note: for weak shock waves, may not reach Mw=1
+        #                                           #       define position of U as Mw minimal extreme point after shock foot
         'A': ['maximum Mw after shock', _i, _X],    # maximum wall Mach number after shock wave (or equal to 3)
         'N': ['new flat boundary', _i, _X],         # starting position of new flat boundary
-                                                    # most of the time, A == N
+        #                                           # most of the time, A == N
         'Hi':  ['maximum Hi', _i, _X],              # position of maximum Hi
         'Hc':  ['maximum Hc', _i, _X],              # position of maximum Hc
         
@@ -52,6 +52,7 @@ class PhysicalSec():
         'lSW': ['single shock', _value],            # single shock wave flag
         'DCp': ['shock strength', _value],          # Cp change through shock wave
         'Err': ['suc Cp area', _value],             # Cp integral of suction plateau fluctuation
+        'FSp': ['fluctuation suc-plat', _value],    # Mw fluctuation of suction plateau
         'DMp': ['Mw dent on plateau', _value],      # Mw dent on suction plateau
         'CLU': ['upper CL', _value],                # CL of upper surface
         'CLL': ['lower CL', _value],                # CL of lower surface
@@ -775,14 +776,44 @@ class PhysicalSec():
         #* 3 => position of just downstream the shock
         # Find the first flat position of Mw in range [x_F, x_F+0.2], defined as dMw = 0 or -1
         i_3 = 0
+        i_cri = 0
+        i_md2 = 0
+        i_flat = 0
         for i in np.arange(i_F, nn-1, 1):
+
+            # 1. Within the range of [x_F, x_F+0.2]
             if xu[i]>x_F+0.2:
                 break
-            if dMw[i]<=dMwcri_1 and dMw[i+1]>dMwcri_1:
-                i_3 = i
+
+            # 2. Locate dMw = dMwcri_1 (tend to go too much downstream)
+            if dMw[i]<=dMwcri_1 and dMw[i+1]>dMwcri_1 and i_cri==0:
+                i_cri = i
+
+            # 3. Locate min d2Mw/dx2 (tend to go too much upstream)
+            if d2Mw[i]<=d2Mw[i-1] and d2Mw[i]>d2Mw[i+1] and i_md2==0:
+                i_md2 = i
+
+            # 4. Locate the first flat position of Mw
             if dMw[i]<=0.0 and dMw[i+1]>0.0:
-                i_3 = i
-                break
+                i_flat = i
+
+        if i_cri-i_md2 > 2*(i_md2-i_F):
+            i_3 = i_md2
+        elif 2*(i_cri-i_md2) < i_md2-i_F:
+            i_3 = i_cri
+        elif i_flat-i_F < 2*(i_cri-i_F) and i_flat!=0:
+            i_3 = i_flat
+        else:
+            i_3 = int(0.5*(i_cri+i_md2))
+
+        '''
+        print('F     %3d  %.2f'%(i_F,   xu[i_F]))
+        print('d2Mw  %3d  %.2f'%(i_md2, xu[i_md2]))
+        print('cri   %3d  %.2f'%(i_cri, xu[i_cri]))
+        print('dMw=0 %3d  %.2f'%(i_flat,xu[i_flat]))
+        print('3     %3d  %.2f'%(i_3,   xu[i_3]))
+        print()
+        '''
 
         #* U => local sonic position
         i_U = 0
@@ -882,9 +913,11 @@ class PhysicalSec():
         sinA = np.sin(self.AoA/180.0*np.pi)
         #* Err => Cp integral of suction plateau fluctuation
         #* DMp => Mw dent on suction plateau
-        # If can not find suction peak, err = 0, DMp = 0.0
+        #* FSp => Mw fluctuation of suction plateau
+        # If can not find suction peak, err = 0, DMp = 0.0, FSp = 0.0
         Err = 0.0
         DMp = 0.0
+        FSp = 0.0
         iL  = self.xf_dict['L'][1]
         if iL!=0:
             i1 = self.xf_dict['1'][1]
@@ -896,6 +929,8 @@ class PhysicalSec():
             Mw0 = self.getValue('L','Mw')
             Mw1 = self.getValue('1','Mw')
             lL1 = x1-xL
+            bump_ = 0.0
+            dent_ = 0.0
 
             for i in np.arange(iL, i1, 1):
 
@@ -907,8 +942,22 @@ class PhysicalSec():
                 ss = (1-tt)*Mw0 + tt*Mw1
                 DMp = max(DMp, ss-self.Mw[i])
 
+                local_avg_mw = (self.Mw[i-2]+self.Mw[i]+self.Mw[i+2])/3.0
+
+                if self.Mw[i-4]>=local_avg_mw and local_avg_mw<=self.Mw[i+4] and dent_<=0.0:
+                    if bump_>0.0:
+                        FSp += bump_ - local_avg_mw
+                    dent_ = local_avg_mw
+                    bump_ = 0.0
+                elif self.Mw[i-4]<=local_avg_mw and local_avg_mw>=self.Mw[i+4] and bump_<=0.0:
+                    if dent_>0.0:
+                        FSp += local_avg_mw - dent_
+                    bump_ = local_avg_mw
+                    dent_ = 0.0
+
         self.xf_dict['Err'][1] = abs(Err)*cosA
         self.xf_dict['DMp'][1] = DMp
+        self.xf_dict['FSp'][1] = FSp
 
         #* kaf => average Mw slope of the aft upper surface (3/N~T)
         xN  = self.xf_dict['N'][2]
