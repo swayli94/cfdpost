@@ -142,7 +142,7 @@ def save_ascii(ID: int, ATTRIBUTES: np.array, ZONES: np.array,
 
     f.close()
 
-def load_ascii(filename: str):
+def load_ascii(filename: str, forTecplot=False):
     '''
     ### Return:
     ```text
@@ -161,36 +161,48 @@ def load_ascii(filename: str):
         lines = f.readlines()
         nLINE = len(lines)
 
+        if forTecplot:
+            n0 = 7
+            i0 = 1
+        else:
+            n0 = 10
+            i0 = 0
+
         line = lines[0].split()
-        ID   = int(line[0])
-        DATE = line[1]
-        TIME = line[2]
+        ID   = int(line[i0+0])
+        DATE = line[i0+1]
+        TIME = line[i0+2]
         INFO = lines[1].strip()
 
-        n_attr = int(lines[2])
-        n_zone = int(lines[3])
+        n_attr = int(lines[2].split()[-1])
+        n_zone = int(lines[3].split()[-1])
         line   = lines[4].split()
-        ni     = int(line[0])
-        nj     = int(line[1])
-        nk     = int(line[2])
-        n_vars = int(lines[5])
+        ni     = int(line[i0+0])
+        nj     = int(line[i0+1])
+        nk     = int(line[i0+2])
+        n_vars = int(lines[5].split()[-1])
 
-        NAME_VARS = lines[6].split()
+        NAME_VARS = lines[6].split()[i0:]
 
         NAME_ATTRS = []
         ATTRIBUTES = np.zeros(n_attr)
         for i in range(n_attr):
-            line = lines[10+i].split()
-            NAME_ATTRS.append(line[0])
-            ATTRIBUTES[i] = float(line[1])
+            line = lines[n0+i].split()
+            NAME_ATTRS.append(line[i0+0])
+            ATTRIBUTES[i] = float(line[i0+1])
 
         NAME_ZONE = []
         ZONES = np.zeros([n_zone, nk, nj, ni, n_vars])
-        iLINE = 10+n_attr
+        iLINE = n0+n_attr
 
         for z in range(n_zone):
 
-            NAME_ZONE.append(lines[iLINE][5:].strip())
+            if forTecplot:
+                line = lines[iLINE].split('"')
+                NAME_ZONE.append(line[-1])
+            else:
+                NAME_ZONE.append(lines[iLINE][5:].strip())
+
             iLINE += 1
 
             for k in range(nk):

@@ -505,7 +505,7 @@ class cfl3d():
         return field_data[j0:j1,0]
 
     @staticmethod
-    def readPlot2d(path: str, fname_grid='plot3d_grid.xyz', fname_sol='plot3d_sol.bin', binary=True):
+    def readPlot2d(path: str, fname_grid='plot3d_grid.xyz', fname_sol='plot3d_sol.bin', binary=True, _double_precision=True):
         '''
         Plot3D Format grid and solution:
         2D, Whole, Formatted, Single-Block Grid and Solution
@@ -545,11 +545,18 @@ class cfl3d():
         alfa = 0.0
         reyn = 0.0
 
+        if _double_precision:
+            r_format = 8
+            s_format = 'd'
+        else:
+            r_format = 4
+            s_format = 'f'
+
         if binary:
 
             with open(os.path.join(path, fname_grid), 'rb') as f:
 
-                _,  = st.unpack('i', f.read(4))
+                a,  = st.unpack('i', f.read(4))
                 ni, = st.unpack('i', f.read(4))
                 nj, = st.unpack('i', f.read(4))
                 xy  = np.zeros((ni,nj,2))
@@ -557,7 +564,7 @@ class cfl3d():
                 for v in range(2):
                     for j in range(nj):
                         for i in range(ni):
-                            xy[i,j,v], = st.unpack('d', f.read(8))
+                            xy[i,j,v], = st.unpack(s_format, f.read(r_format))
 
             with open(os.path.join(path, fname_sol), 'rb') as f:
 
@@ -566,15 +573,15 @@ class cfl3d():
                 nj, = st.unpack('i', f.read(4))
                 qq  = np.zeros((ni,nj,4))
 
-                mach, = st.unpack('d', f.read(8))   # freestream Mach number
-                alfa, = st.unpack('d', f.read(8))   # freestream angle-of-attack
-                reyn, = st.unpack('d', f.read(8))   # freestream Reynolds number
-                time, = st.unpack('d', f.read(8))   # time
+                mach, = st.unpack(s_format, f.read(r_format))   # freestream Mach number
+                alfa, = st.unpack(s_format, f.read(r_format))   # freestream angle-of-attack
+                reyn, = st.unpack(s_format, f.read(r_format))   # freestream Reynolds number
+                time, = st.unpack(s_format, f.read(r_format))   # time
 
                 for q in range(4):
                     for j in range(nj):
                         for i in range(ni):
-                            qq[i,j,q], = st.unpack('d', f.read(8))
+                            qq[i,j,q], = st.unpack(s_format, f.read(r_format))
 
 
         else:
@@ -647,7 +654,7 @@ class cfl3d():
         return xy, qq, mach, alfa, reyn
 
     @staticmethod
-    def readPlot3d(path: str, fname_grid='plot3d_grid.xyz', fname_sol='plot3d_sol.bin', binary=True):
+    def readPlot3d(path: str, fname_grid='plot3d_grid.xyz', fname_sol='plot3d_sol.bin', binary=True, _double_precision=True):
         '''
         Plot3D Format grid and solution:
         3D, Whole, Unformatted, Multi-Block Grid and Solution
@@ -687,6 +694,13 @@ class cfl3d():
         alfa = 0.0
         reyn = 0.0
 
+        if _double_precision:
+            r_format = 8
+            s_format = 'd'
+        else:
+            r_format = 4
+            s_format = 'f'
+
         if binary:
 
             with open(os.path.join(path, fname_grid), 'rb') as f:
@@ -707,7 +721,7 @@ class cfl3d():
                         for k in range(nk[n]):
                             for j in range(nj[n]):
                                 for i in range(ni[n]):
-                                    temp[i,j,k,d], = st.unpack('d', f.read(8))
+                                    temp[i,j,k,d], = st.unpack(s_format, f.read(r_format))
 
                     xyz.append(copy.deepcopy(temp))
 
@@ -725,16 +739,16 @@ class cfl3d():
                 for n in range(num_block):
                     temp = np.zeros((ni[n],nj[n],nk[n],5))
 
-                    mach, = st.unpack('d', f.read(8))   # freestream Mach number
-                    alfa, = st.unpack('d', f.read(8))   # freestream angle-of-attack
-                    reyn, = st.unpack('d', f.read(8))   # freestream Reynolds number
-                    time, = st.unpack('d', f.read(8))   # time
+                    mach, = st.unpack(s_format, f.read(r_format))   # freestream Mach number
+                    alfa, = st.unpack(s_format, f.read(r_format))   # freestream angle-of-attack
+                    reyn, = st.unpack(s_format, f.read(r_format))   # freestream Reynolds number
+                    time, = st.unpack(s_format, f.read(r_format))   # time
 
                     for d in range(5):
                         for k in range(nk[n]):
                             for j in range(nj[n]):
                                 for i in range(ni[n]):
-                                    temp[i,j,k,d], = st.unpack('d', f.read(8))
+                                    temp[i,j,k,d], = st.unpack(s_format, f.read(r_format))
 
                     qq.append(copy.deepcopy(temp))
 
