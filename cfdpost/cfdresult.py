@@ -153,7 +153,7 @@ class cfl3d():
         with open(out, 'r') as f:
             lines = f.readlines()
 
-            if len(lines)==0:
+            if len(lines)<=n+10:
                 f.close()
                 if output_error:
                     return False, AoA, 0.0

@@ -56,6 +56,8 @@ class PhysicalSec():
         'DMp': ['Mw dent on plateau', _value],      # Mw dent on suction plateau
         'CLU': ['upper CL', _value],                # CL of upper surface
         'CLL': ['lower CL', _value],                # CL of lower surface
+        'CdU': ['upper Cd', _value],                # Cdp of upper surface
+        'CdL': ['lower Cd', _value],                # Cdp of lower surface
         'CLw': ['windward CL', _value],             # CL of windward surfaces (before crest point)
         'Cdw': ['windward Cdp', _value],            # Cdp of windward surfaces (before crest point)
         'CLl': ['leeward CL', _value],              # CL of leeward surfaces (behind crest point)
@@ -896,7 +898,8 @@ class PhysicalSec():
         '''
         Calculate auxiliary features based on basic, geo, and shock features.
 
-        ### Get value of: Length, lSW, DCp, Err, DMp, CLU, kaf, CLw, Cdw, CLl, Cdl
+        ### Get value of: Length, lSW, DCp, Err, DMp, kaf, 
+        ### CLU, CLw, Cdw, CLl, Cdl
         '''
         X  = self.x
         Y  = self.y
@@ -981,6 +984,7 @@ class PhysicalSec():
             PFx += Cp_*(Y[i+1]-Y[i])
             PFy += Cp_*(X[i]-X[i+1])
         self.xf_dict['CLU'][1] = PFy*cosA - PFx*sinA
+        self.xf_dict['CdU'][1] = PFy*sinA + PFx*cosA
         
         PFx = 0.0; PFy = 0.0
         for i in np.arange(0, self.iLE, 1):
@@ -988,6 +992,7 @@ class PhysicalSec():
             PFx += Cp_*(Y[i+1]-Y[i])
             PFy += Cp_*(X[i]-X[i+1])
         self.xf_dict['CLL'][1] = PFy*cosA - PFx*sinA
+        self.xf_dict['CdL'][1] = PFy*sinA + PFx*cosA
 
         #* Windward and leeward pressure force (CL, Cdp)
         icu = self.xf_dict['Cu'][1]
