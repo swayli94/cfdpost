@@ -36,8 +36,9 @@ class PhysicalSec():
         'F': ['shock foot', _i, _X],                # shock foot position
         '1': ['shock front', _i, _X],               # shock wave front position
         '3': ['shock hind', _i, _X],                # position of just downstream the shock
-        'D': ['dent on plateau', _i, _X],           # dent on the suction plateau
+        'D': ['dent on plateau', _i, _X],           # largest dent on the suction plateau
         'U': ['local sonic', _i, _X],               # local sonic position
+        'B': ['1st dent after L', _i, _X],          # first dent after suction peak [X_L, X_L+0.1]
         #                                           # Note: for weak shock waves, may not reach Mw=1
         #                                           #       define position of U as Mw minimal extreme point after shock foot
         'A': ['maximum Mw after shock', _i, _X],    # maximum wall Mach number after shock wave (or equal to 3)
@@ -53,7 +54,7 @@ class PhysicalSec():
         'DCp': ['shock strength', _value],          # Cp change through shock wave
         'Err': ['suc Cp area', _value],             # Cp integral of suction plateau fluctuation
         'FSp': ['fluctuation suc-plat', _value],    # Mw fluctuation of suction plateau
-        'DMp': ['Mw dent on plateau', _value],      # Mw dent on suction plateau
+        'DMp': ['Mw dent on plateau', _value],      # dMw of Mw dent on suction plateau
         'CLU': ['upper CL', _value],                # CL of upper surface
         'CLL': ['lower CL', _value],                # CL of lower surface
         'CdU': ['upper Cd', _value],                # Cdp of upper surface
@@ -583,7 +584,7 @@ class PhysicalSec():
         '''
         Locate the index and position of shock wave related flow features.
 
-        ### Get value of: 1, 3, F, U, D, A
+        ### Get value of: 1, 3, F, U, D, A, B
         
         ### Inputs:
         ```text
@@ -639,21 +640,52 @@ class PhysicalSec():
         self.xf_dict['U'][2] = xx[i_U]
 
         #* D => dent on the suction plateau
-        # minimum Mw between L and 1
+        # maximum (linear Mw - actual Mw) between L and 1
+        x_1 = self.xf_dict['1'][2]
         x_L = max(self.xf_dict['L'][2], 0.05)
+        m_1 = self.getValue('1','Mw')
+        m_L = self.getValue('L','Mw')
+        lL1 = x_1-x_L
         i_D = 0
-        min_D = 10.0
+        min_D = 0.0
         for i in np.arange(2, i_1-1, 1):
 
             if xx[i]<x_L:
                 continue
 
-            if mu[i-1]>=mu[i] and mu[i]<=mu[i+1] and mu[i]<min_D:
-                i_D = i
-                min_D = mu[i]
+            tt = (xx[i]-x_L)/lL1
+            ss = (1-tt)*m_L + tt*m_1
+            dM = ss - mu[i]
 
-        self.xf_dict['D'][1] = np.argmin(np.abs(X[iLE:]-xx[i_D])) + iLE
-        self.xf_dict['D'][2] = xx[i_D]
+            if dM > min_D:
+                i_D = i
+                min_D = dM
+
+        if i_D==0:
+            self.xf_dict['D'][1] = self.xf_dict['L'][1]
+            self.xf_dict['D'][2] = self.xf_dict['L'][2]
+        else:
+            self.xf_dict['D'][1] = np.argmin(np.abs(X[iLE:]-xx[i_D])) + iLE
+            self.xf_dict['D'][2] = xx[i_D]
+
+        #* B => first dent after suction peak [X_L, X_L+0.1]
+        # minimum Mw between L and L+0.1
+        x_L = self.xf_dict['L'][2]
+        i_B = 0
+        for i in np.arange(2, i_1-1, 1):
+
+            if xx[i]<x_L or xx[i]>x_L+0.1:
+                continue
+
+            if mu[i-1]>=mu[i] and mu[i]<=mu[i+1] and i_B==0:
+                i_B = i
+
+        if i_B == 0:
+            self.xf_dict['B'][1] = self.xf_dict['L'][1]
+            self.xf_dict['B'][2] = self.xf_dict['L'][2]
+        else:
+            self.xf_dict['B'][1] = np.argmin(np.abs(X[iLE:]-xx[i_B])) + iLE
+            self.xf_dict['B'][2] = xx[i_B]
 
         #* A => maximum Mw after shock
         # Find the maximum position of Mw in range [x_3, 0.9]
@@ -898,8 +930,8 @@ class PhysicalSec():
         '''
         Calculate auxiliary features based on basic, geo, and shock features.
 
-        ### Get value of: Length, lSW, DCp, Err, DMp, kaf, 
-        ### CLU, CLw, Cdw, CLl, Cdl
+        ### Get value of: Length, lSW, DCp, Err, DMp, FSp, kaf, 
+        ### CLU, CLL, CLw, Cdw, CLl, Cdl
         '''
         X  = self.x
         Y  = self.y
