@@ -64,6 +64,9 @@ def save_ascii(ID: int, ATTRIBUTES: np.array, ZONES: np.array,
     '''
     Save data to file [PATH\{PREFIX}ID{SUFFIX}.dat]
 
+    >>> save_ascii(ID, ATTRIBUTES, ZONES, NAME_ATTRS, NAME_VARS,
+    >>>         NAME_ZONE=[], INFO='', PATH='.', PREFIX='', SUFFIX='', forTecplot=False)
+
     ### Inputs:
     ```text
     ID:             integer
@@ -220,6 +223,9 @@ def save_binary(ID: int, ATTRIBUTES: np.array, ZONES: np.array,
                 INFO='', PATH='.', PREFIX='', SUFFIX=''):
     '''
     Save data to file [PATH\{PREFIX}ID{SUFFIX}.bin]
+    
+    >>> save_binary(ID, ATTRIBUTES, ZONES, NAME_ATTRS, NAME_VARS,
+    >>>         NAME_ZONE=[], INFO='', PATH='.', PREFIX='', SUFFIX='')
 
     ### Inputs:
     ```text
