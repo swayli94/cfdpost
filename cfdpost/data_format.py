@@ -64,6 +64,9 @@ def save_ascii(ID: int, ATTRIBUTES: np.array, ZONES: np.array,
     '''
     Save data to file [PATH\{PREFIX}ID{SUFFIX}.dat]
 
+    >>> save_ascii(ID, ATTRIBUTES, ZONES, NAME_ATTRS, NAME_VARS,
+    >>>         NAME_ZONE=[], INFO='', PATH='.', PREFIX='', SUFFIX='', forTecplot=False)
+
     ### Inputs:
     ```text
     ID:             integer
@@ -71,8 +74,8 @@ def save_ascii(ID: int, ATTRIBUTES: np.array, ZONES: np.array,
     ZONES:          ndarray [N-ZONE,NK,NJ,NI,N-VARIABLE]
     NAME_ATTRS:     list, len = N-ATTRIBUTE, string format %50s
     NAME_VARS:      list, len = N-VARIABLE, string format %50s
-    NAME_ZONE:      list, len = N-ZONE, string format %50s
-    INFO:           string, %200s
+    NAME_ZONE:      list, len = N-ZONE, string format
+    INFO:           string
     PATH:           file directory
     forTecplot:     if True, change format for Tecplot
     ```
@@ -109,7 +112,7 @@ def save_ascii(ID: int, ATTRIBUTES: np.array, ZONES: np.array,
     f.write(header+time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
     f.write('\n')
 
-    f.write(header+'  %s\n'%(INFO.strip()[:200]))
+    f.write(header+'  %s\n'%(INFO.strip()))
     f.write(header+'%20d\n'%(n_attr))
     f.write(header+'%20d\n'%(n_zone))
     f.write(header+' %19d %19d %19d\n'%(ni,nj,nk))
@@ -135,12 +138,12 @@ def save_ascii(ID: int, ATTRIBUTES: np.array, ZONES: np.array,
 
         if forTecplot:
             if len(NAME_ZONE)==n_zone:
-                f.write('zone T= "%s"\n'%(NAME_ZONE[z].strip()[:200]))
+                f.write('zone T= "%s"\n'%(NAME_ZONE[z].strip()))
             else:
                 f.write('zone T= "%d"\n'%(z+1))
         else:
             if len(NAME_ZONE)==n_zone:
-                f.write('zone %s\n'%(NAME_ZONE[z].strip()[:200]))
+                f.write('zone %s\n'%(NAME_ZONE[z].strip()))
             else:
                 f.write('zone %d\n'%(z+1))
 
@@ -236,6 +239,9 @@ def save_binary(ID: int, ATTRIBUTES: np.array, ZONES: np.array,
                 INFO='', PATH='.', PREFIX='', SUFFIX=''):
     '''
     Save data to file [PATH\{PREFIX}ID{SUFFIX}.bin]
+    
+    >>> save_binary(ID, ATTRIBUTES, ZONES, NAME_ATTRS, NAME_VARS,
+    >>>         NAME_ZONE=[], INFO='', PATH='.', PREFIX='', SUFFIX='')
 
     ### Inputs:
     ```text
@@ -244,7 +250,7 @@ def save_binary(ID: int, ATTRIBUTES: np.array, ZONES: np.array,
     ZONES:          ndarray [N-ZONE,NK,NJ,NI,N-VARIABLE]
     NAME_ATTRS:     list, len = N-ATTRIBUTE, string format %50s
     NAME_VARS:      list, len = N-VARIABLE, string format %50s
-    NAME_ZONE:      list, len = N-ZONE, string format %50s
+    NAME_ZONE:      list, len = N-ZONE, string format %200s
     INFO:           string, %200s
     PATH:           file directory
     ```
@@ -280,6 +286,8 @@ def save_binary(ID: int, ATTRIBUTES: np.array, ZONES: np.array,
 
     if len(NAME_ZONE)==n_zone:
         for z in range(n_zone):
+            if len(NAME_ZONE[z])>=200:
+                print('Warning [save_binary]: length of zone name should < 200, now = %d'%(len(NAME_ZONE[z])))
             f.write(st.pack('200s', NAME_ZONE[z].encode('ascii')))
     else:
         for z in range(n_zone):
