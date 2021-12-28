@@ -85,12 +85,23 @@ def save_ascii(ID: int, ATTRIBUTES: np.array, ZONES: np.array,
     ni     = ZONES.shape[3]
     n_vars = ZONES.shape[4]
 
-    if forTecplot:
-        filename = '%s%d%s-tecplot.dat'%(PREFIX, ID, SUFFIX)
-        header   = '# '
+    if ID < 0:
+
+        if forTecplot:
+            filename = '%s%s-tecplot.dat'%(PREFIX, SUFFIX)
+            header   = '# '
+        else:
+            filename = '%s%s.dat'%(PREFIX, SUFFIX)
+            header   = ''
+
     else:
-        filename = '%s%d%s.dat'%(PREFIX, ID, SUFFIX)
-        header   = ''
+
+        if forTecplot:
+            filename = '%s%d%s-tecplot.dat'%(PREFIX, ID, SUFFIX)
+            header   = '# '
+        else:
+            filename = '%s%d%s.dat'%(PREFIX, ID, SUFFIX)
+            header   = ''
 
     f = open(os.path.join(PATH, filename), 'w')
 
@@ -159,7 +170,6 @@ def load_ascii(filename: str, forTecplot=False):
     '''
     with open(filename, 'r') as f:
         lines = f.readlines()
-        nLINE = len(lines)
 
         if forTecplot:
             n0 = 7
@@ -182,7 +192,13 @@ def load_ascii(filename: str, forTecplot=False):
         nk     = int(line[i0+2])
         n_vars = int(lines[5].split()[-1])
 
-        NAME_VARS = lines[6].split()[i0:]
+        if forTecplot:
+            NAME_VARS  = []
+            NAME_VARS_ = lines[6].split()[i0:]
+            for name in NAME_VARS_:
+                NAME_VARS.append(name.strip('"'))
+        else:
+            NAME_VARS = lines[6].split()[i0:]
 
         NAME_ATTRS = []
         ATTRIBUTES = np.zeros(n_attr)
