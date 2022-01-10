@@ -218,7 +218,7 @@ def load_ascii(filename: str, forTecplot=False):
 
             if forTecplot:
                 line = lines[iLINE].split('"')
-                NAME_ZONE.append(line[-1])
+                NAME_ZONE.append(line[-2])
             else:
                 NAME_ZONE.append(lines[iLINE][5:].strip())
 
