@@ -265,7 +265,10 @@ def save_binary(ID: int, ATTRIBUTES: np.array, ZONES: np.array,
 
     TIME = time.strftime('%Y-%m-%d  %H:%M:%S', time.localtime())
 
-    filename = '%s%d%s.bin'%(PREFIX, ID, SUFFIX)
+    if ID>0:
+        filename = '%s%d%s.bin'%(PREFIX, ID, SUFFIX)
+    else:
+        filename = '%s%s.bin'%(PREFIX, SUFFIX)
 
     f = open(os.path.join(PATH, filename), 'wb')
     f.write(st.pack('i',    ID))
